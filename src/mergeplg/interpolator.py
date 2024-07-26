@@ -3,8 +3,7 @@
 from __future__ import print_function
 from builtins import zip
 import numpy as np
-from pykrige import OrdinaryKriging
-from idw import Invdisttree
+from .idw import Invdisttree
 
 class IdwKdtreeInterpolator:
     def __init__(self, nnear=8, p=2, exclude_nan=True, max_distance=None):

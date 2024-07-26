@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import pykrige
 
-from mergeplg.interpolator import IdwKdtreeInterpolator
+from .interpolator import IdwKdtreeInterpolator
 
 def block_points_to_lengths(x0):
     # Distances between all discretization points 
