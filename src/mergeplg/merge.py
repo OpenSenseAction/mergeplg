@@ -183,7 +183,7 @@ def merge_additive_IDW(ds_diff, ds_rad, adjust_where_radar=True, min_obs=5):
             shift[~mask] = estimate
 
     # create xarray object similar to ds_rad
-    ds_rad_out = ds_rad[["rainfall_amount"]].copy()
+    ds_rad_out = ds_rad.to_dataset().copy()
 
     # Store shift data
     ds_rad_out["shift"] = (("y", "x"), shift)
