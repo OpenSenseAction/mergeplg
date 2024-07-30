@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
 """
 Created on Wed Jul 24 14:22:46 2024
 
-@author: erlend
+@author: Erlend Øydvin
 """
 
 from __future__ import annotations
