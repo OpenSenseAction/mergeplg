@@ -117,7 +117,7 @@ def calculate_cml_geometry(ds_cmls, disc=8):
     return np.array([ypos, xpos]).transpose([1, 0, 2])
 
 
-def merge_additive_idw(ds_diff, ds_rad, adjust_where_radar=True, min_obs=5):
+def merge_additive_idw(ds_diff, ds_rad, where_rad=True, min_obs=5):
     """Merge CML and radar using an additive approach and the CML midpoint.
 
     Parameters
@@ -149,10 +149,7 @@ def merge_additive_idw(ds_diff, ds_rad, adjust_where_radar=True, min_obs=5):
     rad_field = ds_rad.data
 
     # Remove CMLs that has no radar observations (dry spells)
-    if adjust_where_radar:
-        keep = ~np.isnan(cml_obs)
-    else:
-        keep = np.ones(cml_obs.shape).astype(bool)
+    keep = ~np.isnan(cml_obs) if where_rad else np.full(cml_obs.shape, True)
 
     # Select the CMLs to keep
     cml_i_keep = np.where(keep)[0]
@@ -164,8 +161,13 @@ def merge_additive_idw(ds_diff, ds_rad, adjust_where_radar=True, min_obs=5):
         y = ds_diff.isel(cml_id=cml_i_keep).y.data
         z = cml_obs
 
-        # Gridpoints to interpolate, skip cells with nan and 0
-        mask = np.isnan(rad_field) | (rad_field == 0)
+        # Gridpoints to interpolate, skip cells with nan
+        mask = np.isnan(rad_field)
+
+        # Skip radar pixels with zero
+        if where_rad:
+            mask = mask | (rad_field == 0)
+
         xgrid_t = xgrid[~mask]
         ygrid_t = ygrid[~mask]
 
@@ -187,7 +189,7 @@ def merge_additive_idw(ds_diff, ds_rad, adjust_where_radar=True, min_obs=5):
     ds_rad_out["shift"] = (("y", "x"), shift)
 
     # Remove adjustment effect where we do not have radar observations
-    if adjust_where_radar:
+    if where_rad:
         ds_rad_out["shift"] = ds_rad_out["shift"].where(
             ds_rad_out.rainfall_amount > 0, 0
         )
@@ -213,7 +215,7 @@ def merge_additive_blockkriging(
     ds_rad,
     x0,
     variogram,
-    adjust_where_radar=True,
+    where_rad=True,
     min_obs=5,
 ):
     # Grid coordinates
@@ -228,10 +230,7 @@ def merge_additive_blockkriging(
 
     # Do interpolation where there is radar observations and CML
     # currently this is regulated using nan in the time series, not optimal I guess
-    if adjust_where_radar:
-        keep = ~np.isnan(diff)
-    else:
-        keep = np.ones(diff.shape).astype(bool)
+    keep = ~np.isnan(diff) if where_rad else np.full(diff.shape, True)
 
     # Select the CMLs to keep
     cml_i_keep = np.where(keep)[0]
@@ -260,7 +259,7 @@ def merge_additive_blockkriging(
         mask = np.isnan(rad_field)
 
         # Skip radar pixels with zero
-        if adjust_where_radar:
+        if where_rad:
             mask = mask | (rad_field == 0)
 
         # Grid to visit
@@ -294,7 +293,7 @@ def merge_additive_blockkriging(
     ds_rad_out["shift"] = (("y", "x"), shift)
 
     # Apply shift where we have radar observations
-    if adjust_where_radar:
+    if where_rad:
         ds_rad_out["shift"] = ds_rad_out["shift"].where(
             ds_rad_out.rainfall_amount > 0, 0
         )
