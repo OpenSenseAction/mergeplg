@@ -8,8 +8,6 @@ Created on Wed Jul 24 14:22:46 2024
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
-import pykrige
 
 from .interpolator import IdwKdtreeInterpolator
 
@@ -119,16 +117,15 @@ def calculate_cml_geometry(ds_cmls, disc=8):
     # Store x and y coordinates in the same array (n_cmls, y/x, disc)
     return np.array([ypos, xpos]).transpose([1, 0, 2])
 
-def merge_additive_IDW(ds_diff, ds_rad, adjust_where_radar=True, min_obs=5):
-    """Merge CML and radar using an additive approach and the CML midpoint.
 
-    
+def merge_additive_idw(ds_diff, ds_rad, adjust_where_radar=True, min_obs=5):
+    """Merge CML and radar using an additive approach and the CML midpoint.
 
     Parameters
     ----------
     ds_diff: xarray.DataArray
-        Difference between the CML and radar observations at CML locations. 
-        Must contain the CML midpoint x and y possition given as coordinates 
+        Difference between the CML and radar observations at the CML locations.
+        Must contain the CML midpoint x and y possition given as coordinates
         (mid_x, mid_y).
     ds_rad: xarray.DataArray
         Gridded radar data. Must contain the x and y meshgrid
@@ -140,19 +137,19 @@ def merge_additive_IDW(ds_diff, ds_rad, adjust_where_radar=True, min_obs=5):
     kriging_param: pd.DataFrame
         DataFrame with esitmated exponential variogram paremeters, sill, hr,
         and nugget for all timesteps in ds_cmls.
-    """        
-    
-    X, Y = ds_rad.xs.data, ds_rad.ys.data
+    """
 
-    # Array for storing interpolated values
-    shift = np.zeros(X.shape)
+    # Get radar grid as numpy arrays
+    xgrid, ygrid = ds_rad.xs.data, ds_rad.ys.data
+
+    # Create array for storing interpolated values
+    shift = np.zeros(xgrid.shape)
 
     # Select time step
     cml_obs = ds_diff.data
     rad_field = ds_rad.data
 
-    # Do interpolation where there is radar observations and CML
-    # currently this is regulated using nan in the time series, not optimal I guess
+    # Remove CMLs that has no radar observations (dry spells)
     if adjust_where_radar:
         keep = ~np.isnan(cml_obs)
     else:
@@ -162,24 +159,26 @@ def merge_additive_IDW(ds_diff, ds_rad, adjust_where_radar=True, min_obs=5):
     cml_i_keep = np.where(keep)[0]
     cml_obs = cml_obs[cml_i_keep]
 
-    if cml_i_keep.size > min_obs:  # enough observations
+    # Check that we have enought observations for doing adjustment
+    if cml_i_keep.size >= min_obs:
         x = ds_diff.isel(cml_id=cml_i_keep).x.data
         y = ds_diff.isel(cml_id=cml_i_keep).y.data
         z = cml_obs
 
-        # Gridpoints to interpolate (drawback: large arrays with nan if you only want to interpolate at gauge points)
+        # Gridpoints to interpolate, skip cells with nan and 0
         mask = np.isnan(rad_field) | (rad_field == 0)
-        xgrid = X[~mask]
-        ygrid = Y[~mask]
+        xgrid_t = xgrid[~mask]
+        ygrid_t = ygrid[~mask]
 
-        if xgrid.size > 0:
-            # IDW interpolator kdtree (from pycomlink)
+        # Check that we have any data
+        if xgrid_t.size > 0:
+            # IDW interpolator kdtree
             idw_interpolator = IdwKdtreeInterpolator(
                 nnear=8,
                 p=2,
                 exclude_nan=True,
             )
-            estimate = idw_interpolator(x=x, y=y, z=z, xi=xgrid, yi=ygrid)
+            estimate = idw_interpolator(x=x, y=y, z=z, xi=xgrid_t, yi=ygrid_t)
             shift[~mask] = estimate
 
     # create xarray object similar to ds_rad
@@ -188,7 +187,7 @@ def merge_additive_IDW(ds_diff, ds_rad, adjust_where_radar=True, min_obs=5):
     # Store shift data
     ds_rad_out["shift"] = (("y", "x"), shift)
 
-    # Apply shift where we have radar observations
+    # Remove adjustment effect where we do not have radar observations
     if adjust_where_radar:
         ds_rad_out["shift"] = ds_rad_out["shift"].where(
             ds_rad_out.rainfall_amount > 0, 0
@@ -201,13 +200,16 @@ def merge_additive_IDW(ds_diff, ds_rad, adjust_where_radar=True, min_obs=5):
     )
 
     # Set negative values to zero
-    ds_rad_out["adjusted"] = ds_rad_out.adjusted.where(ds_rad_out.adjusted > 0, 0)
+    ds_rad_out["adjusted"] = ds_rad_out.adjusted.where(
+        ds_rad_out.adjusted > 0,
+        0,
+    )
 
     # Return dataset with adjusted values
     return ds_rad_out.adjusted
 
 
-def merge_additive_BlockKriging(
+def merge_additive_blockkriging(
     ds_cmls,
     ds_rad,
     x0,
@@ -216,10 +218,10 @@ def merge_additive_BlockKriging(
     min_obs=5,
 ):
     # Grid coordinates
-    X, Y = ds_rad.xs.data, ds_rad.ys.data
+    xgrid, ygrid = ds_rad.xs.data, ds_rad.ys.data
 
     # Array for storing interpolated values
-    shift = np.zeros(X.shape)
+    shift = np.zeros(xgrid.shape)
 
     # To numpy for fast lookup
     diff = ds_cmls.R_diff.data
@@ -238,7 +240,6 @@ def merge_additive_BlockKriging(
 
     # Adjust radar if enough observations and hr is not nan
     if ~np.isnan(variogram(0)) & (cml_i_keep.size > min_obs):
-
         # Length between all CML
         lengths_point_l = block_points_to_lengths(x0)
 
@@ -254,7 +255,7 @@ def merge_additive_BlockKriging(
         mat[:-1, -1] = np.ones(cov_block.shape[0])  # lagrange multipliers
 
         # Calc the inverse, only dependent on geometry (and radar for KED)
-        A_inv = np.linalg.pinv(mat)
+        a_inv = np.linalg.pinv(mat)
 
         # Skip radar pixels with np.nan
         mask = np.isnan(rad_field)
@@ -264,23 +265,23 @@ def merge_additive_BlockKriging(
             mask = mask | (rad_field == 0)
 
         # Grid to visit
-        x, y = X[~mask], Y[~mask]
+        xgrid_t, ygrid_t = xgrid[~mask], ygrid[~mask]
 
         # array for storing CML-radar merge
-        estimate = np.zeros(x.shape)
+        estimate = np.zeros(xgrid_t.shape)
 
         # Compute the contributions from all CMLs to a point
-        for i in range(x.size):
+        for i in range(xgrid_t.size):
             # compute target, that is R.H.S of eq 15 (jewel2013)
-            delta_x = x0[cml_i_keep, 1] - x[i]
-            delta_y = x0[cml_i_keep, 0] - y[i]
+            delta_x = x0[cml_i_keep, 1] - xgrid_t[i]
+            delta_y = x0[cml_i_keep, 0] - ygrid_t[i]
             lengths = np.sqrt(delta_x**2 + delta_y**2)
             target = variogram(lengths).mean(axis=1)
 
             target = np.append(target, 1)  # non bias condition
 
             # compuite weigths
-            w = (A_inv @ target)[:-1]
+            w = (a_inv @ target)[:-1]
 
             # its then the sum of the CML values (eq 8, see paragraph after eq 15)
             estimate[i] = diff @ w
@@ -288,7 +289,7 @@ def merge_additive_BlockKriging(
         shift[~mask] = estimate
 
     # create xarray object similar to ds_rad
-    ds_rad_out = ds_rad[["rainfall_amount"]].copy()
+    ds_rad_out = ds_rad.to_dataset().copy()
 
     # Store shift data
     ds_rad_out["shift"] = (("y", "x"), shift)
