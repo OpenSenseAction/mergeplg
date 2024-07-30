@@ -15,7 +15,7 @@ class Invdisttree:
     Usage granted by original author here:
     https://github.com/scipy/scipy/issues/2022#issuecomment-296373506
 
-    invdisttree = Invdisttree( X, z )  -- data points, values
+    invdisttree = Invdisttree( xgrid, z )  -- data points, values
     interpol = invdisttree( q, nnear=3, eps=0, p=1, weights=None, stat=0 )
         interpolates z from the 3 points nearest each query point q;
         For example, interpol[ a query point q ]
@@ -47,10 +47,10 @@ class Invdisttree:
         Similarly, in 3d, p=3 is inverse-volume weighting.
 
     Scaling:
-        if different X coordinates measure different things, Euclidean distance
-        can be way off.  For example, if X0 is in the range 0 to 1
-        but X1 0 to 1000, the X1 distances will swamp X0;
-        rescale the data, i.e. make X0.std() ~= X1.std() .
+        if different xgrid coordinates measure different things, Euclidean distance
+        can be way off.  For example, if xgrid0 is in the range 0 to 1
+        but xgrid1 0 to 1000, the xgrid1 distances will swamp xgrid0;
+        rescale the data, i.e. make xgrid0.std() ~=Xxgrid1.std() .
 
     A nice property of IDW is that it's scale-free around query points:
     if I have values z1 z2 z3 from 3 points at distances d1 d2 d3,
@@ -66,9 +66,9 @@ class Invdisttree:
     # anykernel( dj / av dj ) is also scale-free
     # error analysis, |f(x) - idw(x)| ? todo: regular grid, nnear ndim+1, 2*ndim
 
-    def __init__(self, X, leafsize=10, stat=0):
-        self.X = np.asarray(X, dtype="float")
-        self.tree = KDTree(X, leafsize=leafsize)  # build the tree
+    def __init__(self, xgrid, leafsize=10, stat=0):
+        self.xgrid = np.asarray(xgrid, dtype="float")
+        self.tree = KDTree(xgrid, leafsize=leafsize)  # build the tree
         self.stat = stat
         self.q = None
 
@@ -76,7 +76,10 @@ class Invdisttree:
         q = np.asarray(q, dtype="float")
         z = np.asarray(z, dtype="float")
         # nnear nearest neighbours of each query point --
-        assert len(self.X) == len(z), "len(X) %d != len(z) %d" % (len(self.X), len(z))
+        assert len(self.xgrid) == len(z), "len(X) %d != len(z) %d" % (
+            len(self.xgrid),
+            len(z),
+        )
 
         if max_distance is None:
             max_distance = np.inf

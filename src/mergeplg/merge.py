@@ -19,7 +19,7 @@ def block_points_to_lengths(x0):
     ----------
     x0: np.array
         Array with coordinates for all CMLs. The array is organized into a 3D
-        matrix whith the following structure:
+        matrix with the following structure:
             (number of n CMLs [0, ..., n],
              y/x-cooridnate [0(y), 1(x)],
              interval [0, ..., disc])
@@ -34,7 +34,7 @@ def block_points_to_lengths(x0):
              length_i: [0, ..., number of points along cml].
              length_i: [0, ..., number of points along cml]).
 
-        Acessing the length between point 0 along cml 0 and point 0 along
+        Accessing the length between point 0 along cml 0 and point 0 along
         cml 1 can then be done by lengths_point_l[0, 1, 0, 0]. The mean length
         can be calculated by lengths_point_l.mean(axis = (2, 3)).
     """
@@ -57,10 +57,10 @@ def block_points_to_lengths(x0):
         ]
     )
 
-    # Calculate corresponing length between all points
+    # Calculate corresponding length between all points
     lengths_point_l = np.sqrt(delta_x**2 + delta_y**2)
 
-    # REshape to (n_lines, n_lines, disc, disc)
+    # Reshape to (n_lines, n_lines, disc, disc)
     return lengths_point_l.reshape(
         int(np.sqrt(lengths_point_l.shape[0])),
         int(np.sqrt(lengths_point_l.shape[0])),
@@ -70,12 +70,12 @@ def block_points_to_lengths(x0):
 
 
 def calculate_cml_geometry(ds_cmls, disc=8):
-    """Calculate the possition of points along CMLs.
+    """Calculate the position of points along CMLs.
 
     Calculates the discretized CML geometry by dividing the CMLs into
     disc-number of intervals. The ds_cmls xarray object must contain the
-    projected coordintes (site_0_x, site_0_y, site_1_x site_1_y) defining
-    the start and end point of the CML. If no such projection is avaialable
+    projected coordinates (site_0_x, site_0_y, site_1_x site_1_y) defining
+    the start and end point of the CML. If no such projection is available
     the user can, as an approximation, rename the lat/lon coordinates so that
     they are accepted into this function. Beware that for lat/lon coordinates
     the line geometry is not perfectly represented.
@@ -92,13 +92,13 @@ def calculate_cml_geometry(ds_cmls, disc=8):
     ----------
     x0: np.array
         Array with coordinates for all CMLs. The array is organized into a 3D
-        atrix whith the following structure:
+        atrix with the following structure:
             (number of n CMLs [0, ..., n],
              y/x-cooridnate [0(y), 1(x)],
              interval [0, ..., disc])
     """
-    # Calculate discretized possitions along the lines, store in numy array
-    xpos = np.zeros([ds_cmls.cml_id.size, disc + 1])  # shape (line, possition)
+    # Calculate discretized positions along the lines, store in numy array
+    xpos = np.zeros([ds_cmls.cml_id.size, disc + 1])  # shape (line, position)
     ypos = np.zeros([ds_cmls.cml_id.size, disc + 1])
 
     # For all CMLs
@@ -124,7 +124,7 @@ def merge_additive_idw(ds_diff, ds_rad, where_rad=True, min_obs=5):
     ----------
     ds_diff: xarray.DataArray
         Difference between the CML and radar observations at the CML locations.
-        Must contain the CML midpoint x and y possition given as coordinates
+        Must contain the CML midpoint x and y position given as coordinates
         (mid_x, mid_y).
     ds_rad: xarray.DataArray
         Gridded radar data. Must contain the x and y meshgrid
@@ -134,7 +134,7 @@ def merge_additive_idw(ds_diff, ds_rad, where_rad=True, min_obs=5):
     Returns
     ----------
     kriging_param: pd.DataFrame
-        DataFrame with esitmated exponential variogram paremeters, sill, hr,
+        DataFrame with estimated exponential variogram parameters, sill, hr,
         and nugget for all timesteps in ds_cmls.
     """
 
@@ -155,7 +155,7 @@ def merge_additive_idw(ds_diff, ds_rad, where_rad=True, min_obs=5):
     cml_i_keep = np.where(keep)[0]
     cml_obs = cml_obs[cml_i_keep]
 
-    # Check that we have enought observations for doing adjustment
+    # Check that we have enough observations for doing adjustment
     if cml_i_keep.size >= min_obs:
         x = ds_diff.isel(cml_id=cml_i_keep).x.data
         y = ds_diff.isel(cml_id=cml_i_keep).y.data
@@ -278,7 +278,7 @@ def merge_additive_blockkriging(
 
             target = np.append(target, 1)  # non bias condition
 
-            # compuite weigths
+            # compute weights
             w = (a_inv @ target)[:-1]
 
             # its then the sum of the CML values (eq 8, see paragraph after eq 15)
