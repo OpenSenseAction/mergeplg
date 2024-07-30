@@ -103,10 +103,10 @@ def calculate_cml_geometry(ds_cmls, disc=8):
 
     # For all CMLs
     for block_i, cml_id in enumerate(ds_cmls.cml_id):
-        x_a = ds_cmls.sel(cml_id=cml_id).site_0_x.values
-        y_a = ds_cmls.sel(cml_id=cml_id).site_0_y.values
-        x_b = ds_cmls.sel(cml_id=cml_id).site_1_x.values
-        y_b = ds_cmls.sel(cml_id=cml_id).site_1_y.values
+        x_a = ds_cmls.sel(cml_id=cml_id).site_0_x.data
+        y_a = ds_cmls.sel(cml_id=cml_id).site_0_y.data
+        x_b = ds_cmls.sel(cml_id=cml_id).site_1_x.data
+        y_b = ds_cmls.sel(cml_id=cml_id).site_1_y.data
 
         # for all dicretization steps in link estimate its place on the grid
         for i in range(disc + 1):
