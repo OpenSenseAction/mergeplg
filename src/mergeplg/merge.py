@@ -8,8 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .interpolator import IdwKdtreeInterpolator
-
+from sklearn.neighbors import KNeighborsRegressor
 
 def block_points_to_lengths(x0):
     """Calculates the lengths between all discretized points along the CML
@@ -160,26 +159,28 @@ def merge_additive_idw(ds_diff, ds_rad, where_rad=True, min_obs=5):
         x = ds_diff.isel(cml_id=cml_i_keep).x.data
         y = ds_diff.isel(cml_id=cml_i_keep).y.data
         z = cml_obs
-
+        
+        # Create sklearn designmatrix
+        coord_train = np.hstack([y.reshape(-1, 1), x.reshape(-1, 1)])
+        
         # Gridpoints to interpolate, skip cells with nan
         mask = np.isnan(rad_field)
 
         # Skip radar pixels with zero
         if where_rad:
             mask = mask | (rad_field == 0)
-
-        xgrid_t = xgrid[~mask]
-        ygrid_t = ygrid[~mask]
-
+            
         # Check that we have any data
-        if xgrid_t.size > 0:
-            # IDW interpolator kdtree
-            idw_interpolator = IdwKdtreeInterpolator(
-                nnear=8,
-                p=2,
-                exclude_nan=True,
-            )
-            estimate = idw_interpolator(x=x, y=y, z=z, xi=xgrid_t, yi=ygrid_t)
+        if np.sum(~mask) > 0: # 
+            coord_pred = np.hstack([
+                ygrid[~mask].reshape(-1, 1), 
+                xgrid[~mask].reshape(-1, 1)
+            ])
+        
+            # IDW interpolator kdtree, only supports IDW p=1
+            idw_interpolator = KNeighborsRegressor(n_neighbors=min_obs)
+            idw_interpolator.fit(coord_train, z)
+            estimate = idw_interpolator.predict(coord_pred)
             shift[~mask] = estimate
 
     # create xarray object similar to ds_rad
