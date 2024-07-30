@@ -2,8 +2,6 @@
 # in this version you have to supply the xgrid and ygrid directly
 from __future__ import annotations
 
-from builtins import zip
-
 import numpy as np
 
 from .idw import Invdisttree
@@ -43,11 +41,10 @@ class IdwKdtreeInterpolator:
             self.x = x
             self.y = y
 
-        zi = idw(
+        return idw(
             q=list(zip(xi, yi)),
             z=z,
             nnear=self.nnear,
             p=self.p,
             max_distance=self.max_distance,
         )
-        return zi

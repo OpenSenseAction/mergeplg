@@ -1,8 +1,6 @@
 # coptied from pycomlink v0.3.10
 from __future__ import annotations
 
-from builtins import range
-
 import numpy as np
 from numba import jit
 from scipy.spatial import cKDTree as KDTree
@@ -74,7 +72,7 @@ class Invdisttree:
         self.stat = stat
         self.q = None
 
-    def __call__(self, q, z, nnear=6, eps=0, p=1, weights=None, max_distance=None):
+    def __call__(self, q, z, nnear=6, eps=0, p=1, max_distance=None):
         q = np.asarray(q, dtype="float")
         z = np.asarray(z, dtype="float")
         # nnear nearest neighbours of each query point --
@@ -84,7 +82,7 @@ class Invdisttree:
             max_distance = np.inf
 
         if nnear <= 1:
-            raise ValueError("`nnear` must be greater than 1")
+            raise ValueError
 
         q = np.asarray(q)
         z = np.asarray(z)
@@ -128,8 +126,8 @@ class Invdisttree:
 
 @jit(nopython=True)
 def _numba_idw_loop(distances, ixs, z, z_shape, p):
-    interpol = np.zeros((len(distances),) + z_shape)
-    jinterpol = 0
+    # interpol = np.zeros((len(distances),) + z_shape)
+    interpol = np.zeros((len(distances), *z_shape))  # suggested by RUF
     for i in range(len(distances)):
         dist = distances[i]
         ix = ixs[i]
@@ -148,6 +146,5 @@ def _numba_idw_loop(distances, ixs, z, z_shape, p):
             w /= np.sum(w)
             wz = np.dot(w, z[ix])
 
-        interpol[jinterpol] = wz
-        jinterpol += 1
+        interpol[i] = wz
     return interpol
