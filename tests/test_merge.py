@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
 """
 Created on Mon Jul 29 10:03:34 2024
 
-@author: erlend
+@author: Erlend Øydvin
 """
 
 from __future__ import annotations
@@ -40,13 +39,13 @@ def test_calculate_cml_geometry():
 
 def test_block_points_to_lengths():
     # Check that the length matrix is correctly estimated
-    l = merge.block_points_to_lengths(
+    line = merge.block_points_to_lengths(
         merge.calculate_cml_geometry(ds_cmls.isel(cml_id=[0, 1]), disc=2)
     )
-    l0l0 = l[0, 0]  # Lengths from link0 to link0
-    l0l1 = l[0, 1]  # Lengths from link0 to link0
-    l1l0 = l[1, 0]  # Lengths from link0 to link0
-    l1l1 = l[1, 1]  # Lengths from link0 to link0
+    l0l0 = line[0, 0]  # Lengths from link0 to link0
+    l0l1 = line[0, 1]  # Lengths from link0 to link0
+    l1l0 = line[1, 0]  # Lengths from link0 to link0
+    l1l1 = line[1, 1]  # Lengths from link0 to link0
 
     # Length matrix from line1 to lin1
     assert (
