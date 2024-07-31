@@ -129,6 +129,11 @@ extend-select = [
   "EXE",      # flake8-executable
   "NPY",      # NumPy specific rules
   "PD",       # pandas-vet
+  "E",        # style errors
+  "W",        # style warnings
+  "F",        # flakes
+  "D",        # pydocstyle
+  "UP",        # pyupgrade
 ]
 ignore = [
   "PLR09",    # Too many <...>
@@ -144,9 +149,10 @@ ignore = [
 # typing-modules = ["mergeplg._compat.typing"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["T20"]
-"noxfile.py" = ["T20"]
-"docs/notebooks/**" = ["T201"] # print statement should be allowed
+"tests/**" = ["T20", "D"]
+"noxfile.py" = ["T20", "D100", "D200"]
+"docs/notebooks/**" = ["T201"] # allow print statement in notebooks
+"docs/conf.py" = ["D100", "A001"]
 
 
 [tool.pylint]
