@@ -18,11 +18,7 @@ def lint(session: nox.Session) -> None:
     """Run the linter."""
     session.install("pre-commit")
     session.run(
-        # "pre-commit", "run", "--all-files", "--show-diff-on-failure", *session.posargs
-        "pre-commit",
-        "run",
-        "--all-files",
-        *session.posargs,
+        "pre-commit", "run", "--all-files", "--show-diff-on-failure", *session.posargs
     )
 
 
@@ -32,7 +28,6 @@ def pylint(session: nox.Session) -> None:
     # This needs to be installed into the package environment, and is slower
     # than a pre-commit check
     session.install(".", "pylint>=3.2")
-    session.install("scikit-learn")  # add scikit-learn
     session.run("pylint", "mergeplg", *session.posargs)
 
 
@@ -40,7 +35,6 @@ def pylint(session: nox.Session) -> None:
 def tests(session: nox.Session) -> None:
     """Run the unit and regular tests."""
     session.install(".[test]")
-    session.install("scikit-learn")  # add scikit-learn
     session.run("pytest", *session.posargs)
 
 
