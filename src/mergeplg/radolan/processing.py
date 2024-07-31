@@ -1,15 +1,16 @@
+"""Functions to do one full processing run from RADOLAN-RH to RW."""
+
 import numpy as np
-#import pycomlink as pycml
-from .pycomlink import pycomlink as pycml
 
 from . import adjust
+from .pycomlink import pycomlink as pycml
 
 
 def round_down(a, decimal):
-    """Round down floating points number with selectable decimal precission
+    """Round down floating points number with selectable decimal precision.
 
     Note that this does not work consistently for floats very close to the
-    next value of the given decimal precission. This is due to inexact
+    next value of the given decimal precision. This is due to inexact
     floating point representation. E.g.
     >>> round_down(0.099999999999, 1)
     >>> 0.0
@@ -18,7 +19,6 @@ def round_down(a, decimal):
     >>> 0.1
 
     """
-
     scale = 10**decimal
     return np.trunc(a * scale) / scale
 
@@ -31,39 +31,60 @@ def rh_to_rw(
     nnear=20,
     p=0.7,
     max_distance=60,
-    bogra_kwargs={"max_iterations": 100, "max_allowed_relative_diff": 3},
+    bogra_kwargs={"max_iterations": 100, "max_allowed_relative_diff": 3},  # noqa: B006
     allow_gauge_and_cml=False,
     intersect_weights=None,
 ):
-    """ Produce RW from RH
+    """Produce RW from RH.
 
-    TODO: Update docstring...
-
+    ds_radolan_t
+        bla
+    df_stations_t
+        bla
+    start_index_in_relevant_stations
+        bla
+    idw_method
+        bla
+    nnear
+        bla
+    p
+        bla
+    max_distance
+        bla
+    bogra_kwargs
+        bla
     allow_gauge_and_cml : bool, optional
-        If this is set to True, the columne `sensor_type` has to be present in
+        If this is set to True, the column `sensor_type` has to be present in
         `df_stations_t` with either 'gauge_dwd' or 'cml_ericsson' as entry. Based
         on that an index will be created that is then used to select gauge and CML
         at the relevant parts of the code, currently important when getting the
         radar values at gauge or along CML.
+    intersect_weights
+        bla
 
+    Returns
+    -------
+    foo
 
     """
-
-    # It is important that we do not have a time dimension, not enven one with
+    # It is important that we do not have a time dimension, not even one with
     # length=1, because we expect the data in `ds_radolan_t` to be 2D matrices
     # and not NxMx1. But we want to have the time stamp so that we can use it in
-    # this fuction (even though, I thing it is not yet used to check if the radar
+    # this function (even though, I thing it is not yet used to check if the radar
     # and gauge data are from the same time step).
     if not isinstance(ds_radolan_t.time.values, np.datetime64):
-        raise ValueError(
-            "`ds_radolan_t` must have a `time` variable but no time dimension, i.e. there must only be one timestamp in `time`"
+        msg = (
+            "`ds_radolan_t` must have a `time` variable but no time dimension, "
+            "i.e. there must only be one timestamp in `time`"
         )
+        raise ValueError(msg)
 
     if allow_gauge_and_cml:
-        sensor_is_dwd_gauge = (df_stations_t.sensor_type=='gauge_dwd')
-        sensor_is_cml = (df_stations_t.sensor_type=='cml_ericsson')
+        sensor_is_dwd_gauge = df_stations_t.sensor_type == "gauge_dwd"
+        sensor_is_cml = df_stations_t.sensor_type == "cml_ericsson"
         if intersect_weights is None:
-            raise ValueError('You must pass `intersect_weights` if you allow CML data')
+            msg = "You must pass `intersect_weights` if you allow CML data"
+            raise ValueError(msg)
     else:
         sensor_is_dwd_gauge = np.ones(shape=len(df_stations_t), dtype=bool)
         sensor_is_cml = np.zeros(shape=len(df_stations_t), dtype=bool)
@@ -84,19 +105,25 @@ def rh_to_rw(
     ds_radolan_t["RB"] = ds_radolan_t.RG
 
     # Radar at gauge
-    df_stations_t.loc[sensor_is_dwd_gauge, "radar_RB_rainfall"] = adjust.get_grid_rainfall_at_points(
-        da_grid=ds_radolan_t.RB,
-        df_stations=df_stations_t.loc[sensor_is_dwd_gauge, :],
+    df_stations_t.loc[sensor_is_dwd_gauge, "radar_RB_rainfall"] = (
+        adjust.get_grid_rainfall_at_points(
+            da_grid=ds_radolan_t.RB,
+            df_stations=df_stations_t.loc[sensor_is_dwd_gauge, :],
+        )
     )
 
     # Radar at CML
     if allow_gauge_and_cml:
-        cml_ids_df = df_stations_t.loc[sensor_is_cml, 'station_id']
-        radar_along_cmls = pycml.spatial.grid_intersection.get_grid_time_series_at_intersections(
-            grid_data=ds_radolan_t.RB.expand_dims(dim='time'),
-            intersect_weights=intersect_weights.sel(cml_id=cml_ids_df.values)
+        cml_ids_df = df_stations_t.loc[sensor_is_cml, "station_id"]
+        radar_along_cmls = (
+            pycml.spatial.grid_intersection.get_grid_time_series_at_intersections(
+                grid_data=ds_radolan_t.RB.expand_dims(dim="time"),
+                intersect_weights=intersect_weights.sel(cml_id=cml_ids_df.values),
+            )
         )
-        df_stations_t.loc[sensor_is_cml, 'radar_RB_rainfall'] = radar_along_cmls.isel(time=0).sel(cml_id=cml_ids_df.values).values
+        df_stations_t.loc[sensor_is_cml, "radar_RB_rainfall"] = (
+            radar_along_cmls.isel(time=0).sel(cml_id=cml_ids_df.values).values  # noqa: PD011
+        )
 
     # Diff and fact
     df_stations_t.loc[:, "radar_RB_rainfall_diff"] = (
@@ -159,7 +186,7 @@ def rh_to_rw(
         fill_value=1,
     )
 
-    # Do adjustment based on interm stations
+    # Do adjustment based on interim stations
     ds_radolan_t["addiff_interim"] = ds_radolan_t.RB + ds_radolan_t.dbr_interim
     ds_radolan_t["mulfak_interim"] = ds_radolan_t.RB * ds_radolan_t.fbr_interim
 
@@ -171,7 +198,8 @@ def rh_to_rw(
         ~(ds_radolan_t.mulfak_interim < 0), 0
     )
 
-    # Get adjusted radar values at all stations (even though we will only use the audit station in the next step)
+    # Get adjusted radar values at all stations (even though we will only use the audit
+    # station in the next step)
     df_stations_t.loc[:, "radar_addiff_interim"] = adjust.get_grid_rainfall_at_points(
         da_grid=ds_radolan_t.addiff_interim,
         df_stations=df_stations_t,
@@ -206,7 +234,10 @@ def rh_to_rw(
 
     # Set 0.5 in case both are equally good, or bad...
     # TODO: Check if we should fill NaNs here
-    # equal_index = df_stations_t.diff_addiff_interim.fillna(1e10).abs() == df_stations_t.diff_mulfakt_interim.fillna(1e10).abs()
+    # equal_index = (
+    #     df_stations_t.diff_addiff_interim.fillna(1e10).abs()
+    #     == df_stations_t.diff_mulfakt_interim.fillna(1e10).abs()
+    # )
     equal_index = (
         df_stations_t.diff_addiff_interim.abs()
         == df_stations_t.diff_mulfak_interim.abs()
@@ -277,10 +308,12 @@ def rh_to_rw(
     ds_radolan_t["mulfak_relevant"] = ds_radolan_t.RB * ds_radolan_t.fbr_relevant
     # Set original value in locations where adjustments have NaNs
     ds_radolan_t["addiff_relevant"] = ds_radolan_t.addiff_relevant.where(
-        ~ds_radolan_t.dbr_relevant.isnull(), ds_radolan_t.RB
+        ~ds_radolan_t.dbr_relevant.isnull(),  # noqa: PD003
+        ds_radolan_t.RB,
     )
     ds_radolan_t["mulfak_relevant"] = ds_radolan_t.mulfak_relevant.where(
-        ~ds_radolan_t.fbr_relevant.isnull(), ds_radolan_t.RB
+        ~ds_radolan_t.fbr_relevant.isnull(),  # noqa: PD003
+        ds_radolan_t.RB,
     )
     # Set original value in locations where radar had zero rainfall
     ds_radolan_t["addiff_relevant"] = ds_radolan_t.addiff_relevant.where(
@@ -321,7 +354,8 @@ def rh_to_rw(
         df_stations_t.rainfall_amount - df_stations_t.radar_mulfak_relevant
     )
 
-    # Generate RW und the RW from the adjustments that were only made based on the interim stations
+    # Generate RW und the RW from the adjustments that were only made based
+    # on the interim stations
     ds_radolan_t["RW_not_rounded"] = (
         ds_radolan_t.addiff_relevant * ds_radolan_t.weight_addiff_interim_audit
         + ds_radolan_t.mulfak_relevant * ds_radolan_t.weight_mulfak_interim_audit
@@ -352,10 +386,12 @@ def rh_to_rw(
     # Set interpolated station data at locations where RW is NaN
     ds_radolan_t["RW_no_station_fill"] = ds_radolan_t.RW.copy(deep=True)
     ds_radolan_t["RW"] = ds_radolan_t.RW.where(
-        ~ds_radolan_t.RW.isnull(), ds_radolan_t.RR
+        ~ds_radolan_t.RW.isnull(),  # noqa: PD003
+        ds_radolan_t.RR,
     )
     ds_radolan_t["RW_interim"] = ds_radolan_t.RW_interim.where(
-        ~ds_radolan_t.RW_interim.isnull(), ds_radolan_t.RR
+        ~ds_radolan_t.RW_interim.isnull(),  # noqa: PD003
+        ds_radolan_t.RR,
     )
 
     # Set values smaller 0 to 0
