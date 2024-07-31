@@ -56,10 +56,6 @@ docs = [
   "nbsphinx",
 ]
 
-[tool.poetry.group.dev.dependencies]
-jupyterlab = "^4.2.4"
-scikit-learn = "^1.5.1"
-
 [tool.poetry-dynamic-versioning]
 enable = true
 substitution.files = ["src/mergeplg/__init__.py"]
@@ -103,12 +99,6 @@ disallow_incomplete_defs = false
 module = "mergeplg.*"
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
-
-# mypy was disabled in pre-commit and we hopefully do not need the section
-# below when its usage is fixed. But I keep this section for now.
-#[[tool.mypy.overrides]]
-#module = "numpy,numpy.testing,xarray,matplotlib,matplotlib.pyplot,matplotlib.collections,netCDF4,poligrain"
-#ignore_missing_imports = true
 
 
 [tool.ruff]
