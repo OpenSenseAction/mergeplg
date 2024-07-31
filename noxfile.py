@@ -36,6 +36,7 @@ def pylint(session: nox.Session) -> None:
     # This needs to be installed into the package environment, and is slower
     # than a pre-commit check
     session.install(".", "pylint>=3.2")
+    session.install("scikit-learn")  # add scikit-learn
     session.run("pylint", "mergeplg", *session.posargs)
 
 
@@ -45,6 +46,7 @@ def tests(session: nox.Session) -> None:
     Run the unit and regular tests.
     """
     session.install(".[test]")
+    session.install("scikit-learn")  # add scikit-learn
     session.run("pytest", *session.posargs)
 
 
