@@ -38,6 +38,15 @@ docutils = { version = "!=0.21.post1", optional = true }
 nbsphinx = { version = "*", optional = true }
 nbmake = { version = ">=1.4.6", optional = true}
 
+pykrige = ">=1.7.2"
+poligrain = ">=0.1.0"
+scipy = ">=1.14.0"
+numpy = ">=2.0.1"
+pandas = ">=2.2.2"
+xarray = ">=2024.6.0"
+wradlib = ">=2.0.3"
+scikit-learn = ">=1.5.1"
+
 
 [tool.poetry.dev-dependencies]
 pytest = ">= 6"
