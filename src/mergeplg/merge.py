@@ -1,8 +1,4 @@
-"""
-Created on Wed Jul 24 14:22:46 2024
-
-@author: Erlend Øydvin
-"""
+"""Module for merging CML and radar data."""
 
 from __future__ import annotations
 
@@ -11,8 +7,10 @@ from sklearn.neighbors import KNeighborsRegressor
 
 
 def block_points_to_lengths(x0):
-    """Calculates the lengths between all discretized points along the CML
-    given the numpy array x0 created by the function 'calculate_cml_geometry'.
+    """Calculate the lengths between all discretized points along all CMLs.
+
+    Given the numpy array x0 created by the function 'calculate_cml_geometry'
+    this function calculates the length between all points along all CMLs.
 
     Parameters
     ----------
@@ -24,7 +22,7 @@ def block_points_to_lengths(x0):
              interval [0, ..., disc])
 
     Returns
-    ----------
+    -------
     lengths_point_l: np.array
         Array with lengths between all points along the CMLs. The array is
         organized into a 4D matrix with the following structure:
@@ -36,8 +34,8 @@ def block_points_to_lengths(x0):
         Accessing the length between point 0 along cml 0 and point 0 along
         cml 1 can then be done by lengths_point_l[0, 1, 0, 0]. The mean length
         can be calculated by lengths_point_l.mean(axis = (2, 3)).
-    """
 
+    """
     # Calculate the x distance between all points
     delta_x = np.array(
         [
@@ -88,13 +86,14 @@ def calculate_cml_geometry(ds_cmls, disc=8):
         Number of intervals to discretize lines into.
 
     Returns
-    ----------
+    -------
     x0: np.array
         Array with coordinates for all CMLs. The array is organized into a 3D
         atrix with the following structure:
             (number of n CMLs [0, ..., n],
              y/x-cooridnate [0(y), 1(x)],
              interval [0, ..., disc])
+
     """
     # Calculate discretized positions along the lines, store in numy array
     xpos = np.zeros([ds_cmls.cml_id.size, disc + 1])  # shape (line, position)
@@ -118,29 +117,34 @@ def calculate_cml_geometry(ds_cmls, disc=8):
 
 def merge_additive_idw(ds_diff, ds_rad, where_rad=True, min_obs=5):
     """Merge CML and radar using an additive approach and the CML midpoint.
-    
-    Merges the CML and radar field by interpolating the difference between 
-    radar and CML using IDW from sklearn. Note that a drawback of this approach 
-    is that the current sklearn implementation do not implement the IDW 
-    p-parameter but assumes p=1. 
+
+    Merges the CML and radar field by interpolating the difference between
+    radar and CML using IDW from sklearn. Note that a drawback of this approach
+    is that the current sklearn implementation do not implement the IDW
+    p-parameter but assumes p=1.
 
     Parameters
     ----------
     ds_diff: xarray.DataArray
         Difference between the CML and radar observations at the CML locations.
-        Must contain the CML midpoint x and y position given as xarray 
+        Must contain the CML midpoint x and y position given as xarray
         coordinates mid_x and mid_y.
     ds_rad: xarray.DataArray
-        Gridded radar data. Must contain the x and y meshgrid given as xs 
-        and ys. 
+        Gridded radar data. Must contain the x and y meshgrid given as xs
+        and ys.
+    where_rad: bool
+        If set to True only do adjustment in cells where radar observes
+        rainfall. If set to false to adjustment in those cells as well.
+    min_obs: int
+        Minimum number of observations needed in order to do adjustment.
 
     Returns
-    ----------
+    -------
     da_rad_out: xarray.DataArray
         DataArray with the same structure as the ds_rad but with the CML
-        adjusted radar field. 
-    """
+        adjusted radar field.
 
+    """
     # Get radar grid as numpy arrays
     xgrid, ygrid = ds_rad.xs.data, ds_rad.ys.data
 
@@ -182,8 +186,8 @@ def merge_additive_idw(ds_diff, ds_rad, where_rad=True, min_obs=5):
 
             # IDW interpolator kdtree, only supports IDW p=1
             idw_interpolator = KNeighborsRegressor(
-                n_neighbors= cml_i_keep.size if cml_i_keep.size <= 8 else 8
-                )
+                n_neighbors=cml_i_keep.size if cml_i_keep.size <= 8 else 8
+            )
             idw_interpolator.fit(coord_train, z)
             estimate = idw_interpolator.predict(coord_pred)
             shift[~mask] = estimate
@@ -224,6 +228,40 @@ def merge_additive_blockkriging(
     where_rad=True,
     min_obs=5,
 ):
+    """Merge CML and radar using an additive block kriging.
+
+    Marges the provided radar field in ds_rad to CML observations by
+    interpolating the difference between the CML and radar observations using
+    block kriging. This takes into account the full path integrated CML
+    rainfall rate.
+
+    Parameters
+    ----------
+    ds_diff: xarray.DataArray
+        Difference between the CML and radar observations at the CML locations.
+        Must contain the CML midpoint x and y position given as xarray
+        coordinates mid_x and mid_y.
+    ds_rad: xarray.DataArray
+        Gridded radar data. Must contain the x and y meshgrid given as xs
+        and ys.
+    x0: numpy.array
+        CML geometry as created by calculate_cml_geometry.
+    variogram: function
+        A user defined python function defining the variogram. Takes a distance
+        h and returns the expected variance.
+    where_rad: bool
+        If set to True only do adjustment in cells where radar observes
+        rainfall. If set to false to adjustment in those cells as well.
+    min_obs: int
+        Minimum number of observations needed in order to do adjustment.
+
+    Returns
+    -------
+    da_rad_out: xarray.DataArray
+        DataArray with the same structure as the ds_rad but with the CML
+        adjusted radar field.
+
+    """
     # Grid coordinates
     xgrid, ygrid = ds_rad.xs.data, ds_rad.ys.data
 
@@ -241,9 +279,9 @@ def merge_additive_blockkriging(
     cml_i_keep = np.where(keep)[0]
     diff = diff[cml_i_keep]
 
-    # Adjust radar if enough observations and variogram is not nan
-    if ~np.isnan(variogram(0)) & (cml_i_keep.size > min_obs):
-        # Length between all CML
+    # Adjust radar if enough observations
+    if cml_i_keep.size > min_obs:
+        # Calculate lengths between all points along all CMLs
         lengths_point_l = block_points_to_lengths(x0)
 
         # estimate mean variogram over link geometries
@@ -275,18 +313,21 @@ def merge_additive_blockkriging(
 
         # Compute the contributions from all CMLs to points in grid
         for i in range(xgrid_t.size):
-            # compute target, that is R.H.S of eq 15 (jewel2013)
+            # Compute lengths between all points along all links
             delta_x = x0[cml_i_keep, 1] - xgrid_t[i]
             delta_y = x0[cml_i_keep, 0] - ygrid_t[i]
             lengths = np.sqrt(delta_x**2 + delta_y**2)
+
+            # Estimate expected variance for all links
             target = variogram(lengths).mean(axis=1)
 
-            target = np.append(target, 1)  # non bias condition
+            # Add non bias condition
+            target = np.append(target, 1)
 
-            # compute weights
+            # Compute the kriging weights
             w = (a_inv @ target)[:-1]
 
-            # its then the sum of the CML values (eq 8, see paragraph after eq 15)
+            # Estimate rainfall amounts at location i
             estimate[i] = diff @ w
 
         shift[~mask] = estimate
