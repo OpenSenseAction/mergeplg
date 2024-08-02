@@ -186,28 +186,28 @@ def merge_additive_idw(ds_diff, ds_rad, where_rad=True, min_obs=5):
 
             # IDW interpolator kdtree, only supports IDW p=1
             idw_interpolator = KNeighborsRegressor(
-                n_neighbors=cml_i_keep.size if cml_i_keep.size <= 8 else 8
+                n_neighbors=cml_i_keep.size if cml_i_keep.size <= 8 else 8,
+                weights="distance",  # Use distance for setting weights
             )
             idw_interpolator.fit(coord_train, z)
+
             estimate = idw_interpolator.predict(coord_pred)
             shift[~mask] = estimate
 
     # create xarray object similar to ds_rad
-    ds_rad_out = ds_rad.to_dataset().copy()
+    ds_rad_out = ds_rad.rename("R").to_dataset().copy()
 
     # Store shift data
     ds_rad_out["shift"] = (("y", "x"), shift)
 
     # Remove adjustment effect where we do not have radar observations
     if where_rad:
-        ds_rad_out["shift"] = ds_rad_out["shift"].where(
-            ds_rad_out.rainfall_amount > 0, 0
-        )
+        ds_rad_out["shift"] = ds_rad_out["shift"].where(ds_rad_out.R > 0, 0)
 
     # Adjust field
     ds_rad_out["adjusted"] = (
         ("y", "x"),
-        ds_rad_out["shift"].data + ds_rad_out.rainfall_amount.data,
+        ds_rad_out["shift"].data + ds_rad_out.R.data,
     )
 
     # Set negative values to zero
@@ -280,7 +280,7 @@ def merge_additive_blockkriging(
     diff = diff[cml_i_keep]
 
     # Adjust radar if enough observations
-    if cml_i_keep.size > min_obs:
+    if cml_i_keep.size >= min_obs:
         # Calculate lengths between all points along all CMLs
         lengths_point_l = block_points_to_lengths(x0)
 
@@ -333,21 +333,19 @@ def merge_additive_blockkriging(
         shift[~mask] = estimate
 
     # create xarray object similar to ds_rad
-    ds_rad_out = ds_rad.to_dataset().copy()
+    ds_rad_out = ds_rad.rename("R").to_dataset().copy()
 
     # Store shift data
     ds_rad_out["shift"] = (("y", "x"), shift)
 
     # Remove adjustment effect where we do not have radar observations
     if where_rad:
-        ds_rad_out["shift"] = ds_rad_out["shift"].where(
-            ds_rad_out.rainfall_amount > 0, 0
-        )
+        ds_rad_out["shift"] = ds_rad_out["shift"].where(ds_rad_out.R > 0, 0)
 
     # Adjust field
     ds_rad_out["adjusted"] = (
         ("y", "x"),
-        ds_rad_out["shift"].data + ds_rad_out.rainfall_amount.data,
+        ds_rad_out["shift"].data + ds_rad_out.R.data,
     )
 
     # Set negative values to zero
