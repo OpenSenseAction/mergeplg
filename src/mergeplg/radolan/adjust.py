@@ -4,6 +4,7 @@ import numpy as np
 import wradlib
 import xarray as xr
 from scipy import ndimage
+from scipy.spatial import cKDTree as KDTree
 
 from . import idw
 
@@ -156,8 +157,6 @@ def get_audit_station_indicies(x_gage, y_gage, index_relevant_stations, start_in
         of x_gage and y_gage.
 
     """
-    from scipy.spatial import cKDTree as KDTree
-
     index_control_stations = []
     index_already_visited_stations = []
 
