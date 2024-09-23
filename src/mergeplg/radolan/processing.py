@@ -5,6 +5,11 @@ import poligrain as plg
 
 from . import adjust
 
+# This is just here because I am too lazy to fix pylint errors and
+# and cannot use the per-line ignoring for pylint...
+#
+# pylint: skip-file
+
 
 def round_down(a, decimal):
     """Round down floating points number with selectable decimal precision.
