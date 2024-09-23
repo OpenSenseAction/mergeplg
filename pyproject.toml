@@ -47,7 +47,6 @@ wradlib = ">=2.0.3"
 scikit-learn = ">=1.5.1"
 scikit-gstat = ">=1.0.17"
 numba = "*"
-pycomlink = { path = "./src/mergeplg/radolan/pycomlink", develop = true }
 
 [tool.poetry.dev-dependencies]
 pytest = ">= 6"

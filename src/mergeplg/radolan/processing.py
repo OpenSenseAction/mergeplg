@@ -1,9 +1,9 @@
 """Functions to do one full processing run from RADOLAN-RH to RW."""
 
 import numpy as np
+import poligrain as plg
 
 from . import adjust
-from .pycomlink import pycomlink as pycml
 
 
 def round_down(a, decimal):
@@ -115,11 +115,9 @@ def rh_to_rw(
     # Radar at CML
     if allow_gauge_and_cml:
         cml_ids_df = df_stations_t.loc[sensor_is_cml, "station_id"]
-        radar_along_cmls = (
-            pycml.spatial.grid_intersection.get_grid_time_series_at_intersections(
-                grid_data=ds_radolan_t.RB.expand_dims(dim="time"),
-                intersect_weights=intersect_weights.sel(cml_id=cml_ids_df.values),
-            )
+        radar_along_cmls = plg.spatial.get_grid_time_series_at_intersections(
+            grid_data=ds_radolan_t.RB.expand_dims(dim="time"),
+            intersect_weights=intersect_weights.sel(cml_id=cml_ids_df.values),
         )
         df_stations_t.loc[sensor_is_cml, "radar_RB_rainfall"] = (
             radar_along_cmls.isel(time=0).sel(cml_id=cml_ids_df.values).values  # noqa: PD011

@@ -3,9 +3,6 @@
 
 version: 2
 
-submodules:
-  exclude: all
-
 build:
   os: ubuntu-22.04
   tools:
