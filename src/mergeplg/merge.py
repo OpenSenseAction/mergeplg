@@ -5,6 +5,10 @@ from __future__ import annotations
 import numpy as np
 from sklearn.neighbors import KNeighborsRegressor
 
+import poligrain as plg
+import xarray as xr
+import pykrige
+import pandas as pd
 
 def block_points_to_lengths(x0):
     """Calculate the lengths between all discretized points along all CMLs.
@@ -114,6 +118,194 @@ def calculate_cml_geometry(ds_cmls, disc=8):
     # Store x and y coordinates in the same array (n_cmls, y/x, disc)
     return np.array([ypos, xpos]).transpose([1, 0, 2])
 
+class Merge:
+    def __init__(self, ds_cml, ds_rad, grid_location_radar, min_obs, smooth_factor):
+        # Check that both time dimensions are similar
+        if not (ds_cml.time == ds_rad.time).all():
+            raise ValueError 
+        
+        # The dataframes are just referenced, not stored twice
+        self.ds_cml = ds_cml 
+        self.ds_rad = ds_rad
+        
+        # Stor hyperparameters
+        self.min_obs, self.smooth_factor = min_obs, smooth_factor
+        
+        # Check that CMLs are inside radar grid?
+        
+        # Calculate intersect weights
+        intersect_weights = plg.spatial.calc_sparse_intersect_weights_for_several_cmls(
+            x1_line=ds_cml.site_0_lon.data,
+            y1_line=ds_cml.site_0_lat.data,
+            x2_line=ds_cml.site_1_lon.data,
+            y2_line=ds_cml.site_1_lat.data,
+            cml_id=ds_cml.cml_id.data,
+            x_grid=ds_rad.longitudes.data,
+            y_grid=ds_rad.latitudes.data,
+            grid_point_location=grid_location_radar,  
+        )
+        
+        # Calculate radar ranfall along CMLs        
+        self.R_rad = plg.spatial.get_grid_time_series_at_intersections(
+            grid_data=ds_rad.rainfall_amount,
+            intersect_weights=intersect_weights,
+        )
+        
+        # Store x and y grids for faster access later
+        self.xgrid, self.ygrid = ds_rad.xs.data, ds_rad.ys.data
+        
+class MergeAdditiveIDW(Merge):
+    def __init__(self, ds_cml, ds_rad, grid_location_radar='center', min_obs=5, smooth_factor=3):
+        Merge.__init__(self, ds_cml, ds_rad, grid_location_radar, min_obs, smooth_factor)
+        
+        # Calculate the difference between radar and CML
+        self.R_diff = xr.where(
+            (self.R_rad > 0) & (self.ds_cml.R > 0), 
+            self.ds_cml.R - self.R_rad, 
+            np.nan,
+        )
+        
+        self.R_diff['mid_x'] = (ds_cml.site_0_x + ds_cml.site_1_x) / 2
+        self.R_diff['mid_y'] = (ds_cml.site_0_y + ds_cml.site_1_y) / 2
+
+    def __call__(self, time, smooth_factor=1):
+        # Create array for storing interpolated values
+        return merge_additive_idw(
+            self.R_diff.sel(time = time), 
+            self.ds_rad.rainfall_amount.sel(time = time), 
+            where_rad=True, 
+            min_obs=5
+        )
+
+class MergeAdditiveBlockKriging(Merge):
+    def __init__(self, ds_cml, ds_rad, grid_location_radar='center', min_obs=5, smooth_factor=3, T = 0, drop_zero = True, kriging_param_rolling = 3, disc = 9):
+        Merge.__init__(self, ds_cml, ds_rad, grid_location_radar, min_obs, smooth_factor)
+        
+        # Calculate the difference between radar and CML
+        self.R_diff = xr.where(
+            (self.R_rad > 0) & (self.ds_cml.R > 0), 
+            self.ds_cml.R - self.R_rad, 
+            np.nan,
+        )
+        
+        # Midpoint of CML, used for variogram fitting
+        x_ = (ds_cml.site_0_x + ds_cml.site_1_x) / 2
+        y_ = (ds_cml.site_0_y + ds_cml.site_1_y) / 2
+        
+        
+        # Calculate CML geometry
+        self.x0 = calculate_cml_geometry(ds_cml, disc=disc)
+        
+        # Calculate kriging parameters
+        kriging_param = {}        
+        for time_mid in range(ds_cml.time.size):
+            x, y, values = [], [], []
+        
+            # Set lower and upper timesteps
+            lower = time_mid - T
+            if lower < 0:
+                lower = 0
+            upper = time_mid + T + 1
+            if upper > ds_cml.time.size:
+                upper = ds_cml.time.size
+        
+            # Timesteps in window
+            for time in ds_cml.time[lower:upper]:
+                val_ = self.R_diff.sel(time=time).data
+        
+                # Drop zero values if drop_zero
+                keep = (val_ > 0) if drop_zero else np.full(val_.shape, True)
+        
+                values.append(val_[keep])
+                x.append(x_[keep])
+                y.append(y_[keep])
+        
+            # turn lists to numpy
+            x = np.concatenate(x)
+            y = np.concatenate(y)
+            values = np.concatenate(values)
+        
+            # Estimate variogram if enough observations
+            if x.size >= min_obs:
+                ok = pykrige.OrdinaryKriging(
+                    x,
+                    y,
+                    values,
+                    variogram_model="exponential",
+                    # enable_plotting=True
+                )
+        
+                sill, hr, nugget = ok.variogram_model_parameters
+        
+                kriging_param[ds_cml.time.data[time_mid]] = [sill, hr, nugget]
+        
+            else:
+                kriging_param[ds_cml.time.data[time_mid]] = [np.nan, np.nan, np.nan]
+
+        kriging_param = pd.DataFrame.from_dict(
+            kriging_param, orient="index", columns=["sill", "hr", "nugget"]
+        )
+        
+        # Smooth parameters over several timesteps
+        if kriging_param_rolling is not None:
+            # Smooth hr
+            kriging_param["hr"] = (
+                kriging_param["hr"].rolling(kriging_param_rolling, min_periods=1, center=True).mean()
+            )
+            
+            # Use hr when hr_smooth is nan
+            kriging_param["hr"] = kriging_param["hr"].where(
+                ~np.isnan(kriging_param["hr"]) 
+            )
+            
+            # Smooth sill
+            kriging_param["sill"] = (
+                kriging_param["sill"].rolling(kriging_param_rolling, min_periods=1, center=True).mean()
+            )
+            
+            # Use sill when sill_smooth is nan
+            kriging_param["sill"] = kriging_param["sill"].where(
+                ~np.isnan(kriging_param["sill"])
+            )
+            
+            # Example smooth nugget
+            kriging_param["nugget"] = (
+                kriging_param["nugget"].rolling(kriging_param_rolling, min_periods=1, center=True).mean()
+            )
+            
+            # Use nugget when nugget smooth is nan
+            kriging_param["nugget"] = kriging_param["nugget"].where(
+                ~np.isnan(kriging_param["nugget"])
+            )
+            
+            # Set large nugget values to 90% of sill
+            kriging_param["nugget"] = kriging_param["nugget"].where(
+                kriging_param["nugget"] < kriging_param["sill"] * 0.9,
+                other=kriging_param["sill"] * 0.9,
+            )
+            
+        self.kriging_param = kriging_param
+        
+    def __call__(self, time, smooth_factor=1):
+        nugget = self.kriging_param.loc[time.data]["nugget"]
+        sill = self.kriging_param.loc[time.data]["sill"]
+        hr = self.kriging_param.loc[time.data]["hr"]        
+        
+        # Make variogram 
+        def variogram(h):  # Exponential variogram
+            return nugget + (sill - nugget) * (1 - np.exp(-h * 3 / hr))
+        
+        # Create array for storing interpolated values
+        return merge_additive_blockkriging(
+            self.R_diff.sel(time = time), 
+            self.ds_rad.rainfall_amount.sel(time = time), 
+            self.x0,
+            variogram,
+            where_rad=True, 
+            min_obs=5
+        )
+    
+
 
 def merge_additive_idw(ds_diff, ds_rad, where_rad=True, min_obs=5):
     """Merge CML and radar using an additive approach and the CML midpoint.
@@ -157,15 +349,15 @@ def merge_additive_idw(ds_diff, ds_rad, where_rad=True, min_obs=5):
 
     # Remove CMLs that has no radar observations (dry spells)
     keep = ~np.isnan(cml_obs) if where_rad else np.full(cml_obs.shape, True)
-
+    
     # Select the CMLs to keep
     cml_i_keep = np.where(keep)[0]
     cml_obs = cml_obs[cml_i_keep]
 
     # Check that we have enough observations for doing adjustment
     if cml_i_keep.size >= min_obs:
-        x = ds_diff.isel(cml_id=cml_i_keep).x.data
-        y = ds_diff.isel(cml_id=cml_i_keep).y.data
+        x = ds_diff.isel(cml_id=cml_i_keep).mid_x.data
+        y = ds_diff.isel(cml_id=cml_i_keep).mid_y.data
         z = cml_obs
 
         # Create sklearn designmatrix
@@ -199,6 +391,8 @@ def merge_additive_idw(ds_diff, ds_rad, where_rad=True, min_obs=5):
 
     # Store shift data
     ds_rad_out["shift"] = (("y", "x"), shift)
+    
+    # TODO: Smooth the shift data
 
     # Remove adjustment effect where we do not have radar observations
     if where_rad:
@@ -284,7 +478,7 @@ def merge_additive_blockkriging(
         # Calculate lengths between all points along all CMLs
         lengths_point_l = block_points_to_lengths(x0)
 
-        # estimate mean variogram over link geometries
+        # Estimate mean variogram over link geometries
         cov_block = variogram(lengths_point_l[cml_i_keep, :][:, cml_i_keep]).mean(
             axis=(2, 3)
         )
@@ -356,3 +550,140 @@ def merge_additive_blockkriging(
 
     # Return dataset with adjusted values
     return ds_rad_out.adjusted
+
+
+def merge_ked_blockkriging(
+    ds_cml,
+    ds_cml_rad,
+    ds_rad,
+    x0,
+    variogram,
+    where_rad=True,
+    min_obs=5,
+):
+    """Merge CML and radar using an additive block kriging.
+
+    Marges the provided radar field in ds_rad to CML observations by
+    interpolating the difference between the CML and radar observations using
+    block kriging. This takes into account the full path integrated CML
+    rainfall rate.
+
+    Parameters
+    ----------
+    ds_cml: xarray.DataArray
+        Difference between the CML and radar observations at the CML locations.
+        Must contain the CML midpoint x and y position given as xarray
+        coordinates mid_x and mid_y.
+    ds_rad: xarray.DataArray
+        Gridded radar data. Must contain the x and y meshgrid given as xs
+        and ys.
+    x0: numpy.array
+        CML geometry as created by calculate_cml_geometry.
+    variogram: function
+        A user defined python function defining the variogram. Takes a distance
+        h and returns the expected variance.
+    where_rad: bool
+        If set to True only do adjustment in cells where radar observes
+        rainfall. If set to false to adjustment in those cells as well.
+    min_obs: int
+        Minimum number of observations needed in order to do adjustment.
+
+    Returns
+    -------
+    da_rad_out: xarray.DataArray
+        DataArray with the same structure as the ds_rad but with the CML
+        adjusted radar field.
+
+    """
+    # Grid coordinates
+    xgrid, ygrid = ds_rad.xs.data, ds_rad.ys.data
+    
+    # Array for storing merged values
+    rain = np.zeros(xgrid.shape)
+        
+    # To numpy for fast lookup
+    cml_obs = ds_cml.data #
+    cml_rad = ds_cml_rad.data # radar obs along cml
+    rad_field = ds_rad.data
+    
+    # Remove CMLs that has no radar observations (dry spells)
+    keep = ~np.isnan(cml_obs) if where_rad else np.full(cml_obs.shape, True)
+
+    # Select the CMLs to keep
+    cml_i_keep = np.where(keep)[0]
+    cml_obs = cml_obs[cml_i_keep]    
+    cml_rad = cml_rad[cml_i_keep]    
+    
+    
+    # Select stations where CML > 0, assumed by transformation function
+    cml_i_keep = np.where((cml_obs > 0) & (cml_rad > 0))[0] 
+    cml_rad = cml_rad.isel(cml_id = cml_i_keep).data
+    cml_obs = cml_obs.isel(cml_id = cml_i_keep).data            
+
+
+
+    # Adjust radar if enough observations
+    if cml_i_keep.size >= min_obs:
+        # Calculate lengths between all points along all CMLs
+        lengths_point_l = block_points_to_lengths(x0)
+        
+        # Estimate mean variogram over link geometries
+        cov_block = variogram(lengths_point_l[cml_i_keep, :][:, cml_i_keep]).mean(
+            axis=(2, 3)
+        )
+        
+        mat = np.zeros([cov_block.shape[0] + 2, cov_block.shape[1] + 2])
+        mat[:cov_block.shape[0], :cov_block.shape[1]] = cov_block
+        mat[-2, :-2] = np.ones(cov_block.shape[1]) # non-bias condition
+        mat[-1, :-2] = cml_rad # Radar drift
+        mat[:-2, -2] = np.ones(cov_block.shape[0]) # lagrange multipliers
+        mat[:-2, -1] = cml_rad # Radar drift
+ 
+        # Calc the inverse, only dependent on geometry (and radar for KED)
+        A_inv = np.linalg.pinv(mat)
+            
+        # Skip radar pixels with np.nan
+        mask = np.isnan(rad_field)
+
+        # Skip radar pixels with zero
+        if where_rad:
+            mask = mask | (rad_field == 0)
+
+        # Grid to visit
+        xgrid_t, ygrid_t = xgrid[~mask], ygrid[~mask]
+        rad_field_t = rad_field[~mask]
+        
+        # array for storing CML-radar merge
+        estimate = np.zeros(xgrid_t.shape)
+
+        # Compute the contributions from all CMLs to points in grid
+        for i in range(xgrid_t.size):
+            # compute target, that is R.H.S of eq 15 (jewel2013)
+            delta_x = (x0[cml_i_keep, 1] - xgrid_t[i])
+            delta_y = (x0[cml_i_keep, 0] - ygrid_t[i])
+            lengths = np.sqrt(delta_x**2 + delta_y**2)
+            
+            target =  variogram(lengths).mean(axis = 1)
+        
+            target = np.append(target, 1) # non bias condition
+            target = np.append(target, rad_field_t[i]) # radar value
+                            
+            # compuite weigths
+            w = (A_inv@target)[:-2]
+            
+            # its then the sum of the CML values (eq 8, see paragraph after eq 15)
+            estimate[i] = cml_obs@w   
+            
+        rain[~mask] = estimate
+    
+        # set negative values to zero
+        rain[rain < 0] = 0
+
+    # TODO: Create a new xarray dataset instead of doing copy
+    ds_rad_out = ds_rad.rename("R").to_dataset().copy()
+
+    ds_rad_out['rain_KED'] = (('y', 'x'), rain)
+    return ds_rad_out.rain_KED
+
+
+
