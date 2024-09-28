@@ -590,7 +590,7 @@ class MergeBlockKrigingExternalDrift(Merge):
         return self.da_rad.sel(time=time)
 
 
-def merge_additive_idw(da_rad, cml_diff, x0, where_rad=True):
+def merge_additive_idw(da_rad, cml_diff, x0):
     """Merge CML and radar using an additive approach and the CML midpoint.
 
     Merges the CML and radar field by interpolating the difference between
@@ -645,9 +645,8 @@ def merge_additive_idw(da_rad, cml_diff, x0, where_rad=True):
     # create xarray object similar to ds_rad
     ds_rad_out = da_rad.rename("R").to_dataset().copy()
 
-    # Remove adjustment effect where we do not have radar observations
-    if where_rad:
-        shift[np.isnan(shift)] = 0
+    # Set areas with nan to zero
+    shift[np.isnan(shift)] = 0
 
     # Do adjustment
     adjusted = shift + ds_rad_out.R.data
@@ -662,13 +661,7 @@ def merge_additive_idw(da_rad, cml_diff, x0, where_rad=True):
     return ds_rad_out.adjusted
 
 
-def merge_additive_blockkriging(
-    da_rad,
-    cml_diff,
-    x0,
-    variogram,
-    where_rad=True,
-):
+def merge_additive_blockkriging(da_rad, cml_diff, x0, variogram):
     """Merge CML and radar using an additive block kriging.
 
     Marges the provided radar field in ds_rad to CML observations by
@@ -688,9 +681,6 @@ def merge_additive_blockkriging(
     variogram: function
         A user defined python function defining the variogram. Takes a distance
         h and returns the expected variance.
-    where_rad: bool
-        If set to True only do adjustment in cells where radar observes
-        rainfall. If set to false to adjustment in those cells as well.
 
     Returns
     -------
@@ -723,10 +713,6 @@ def merge_additive_blockkriging(
     # Skip radar pixels with np.nan
     mask = np.isnan(da_rad.data)
 
-    # Skip radar pixels with zero
-    if where_rad:
-        mask = mask | (da_rad.data == 0)
-
     # Grid to visit
     xgrid_t, ygrid_t = xgrid[~mask], ygrid[~mask]
 
@@ -752,42 +738,29 @@ def merge_additive_blockkriging(
         # Estimate rainfall amounts at location i
         estimate[i] = cml_diff @ w
 
+    # Store shift values
     shift[~mask] = estimate
 
     # create xarray object similar to ds_rad
     ds_rad_out = da_rad.rename("R").to_dataset().copy()
 
-    # Store shift data
-    ds_rad_out["shift"] = (("y", "x"), shift)
+    # Set areas with nan to zero
+    shift[np.isnan(shift)] = 0
 
-    # Remove adjustment effect where we do not have radar observations
-    if where_rad:
-        ds_rad_out["shift"] = ds_rad_out["shift"].where(ds_rad_out.R > 0, 0)
-
-    # Adjust field
-    ds_rad_out["adjusted_rainfall"] = (
-        ("y", "x"),
-        ds_rad_out["shift"].data + ds_rad_out.R.data,
-    )
+    # Do adjustment
+    adjusted = shift + ds_rad_out.R.data
 
     # Set negative values to zero
-    ds_rad_out["adjusted_rainfall"] = ds_rad_out.adjusted_rainfall.where(
-        ds_rad_out.adjusted_rainfall > 0,
-        0,
-    )
+    adjusted = np.where(adjusted > 0, adjusted, 0)
+
+    # Store shift data
+    ds_rad_out["adjusted_rainfall"] = (("y", "x"), adjusted)
 
     # Return dataset with adjusted values
     return ds_rad_out.adjusted_rainfall
 
 
-def merge_ked_blockkriging(
-    da_rad,
-    cml_rad,
-    cml_obs,
-    x0,
-    variogram,
-    where_rad=True,
-):
+def merge_ked_blockkriging(da_rad, cml_rad, cml_obs, x0, variogram):
     """Merge CML and radar using an additive block kriging.
 
     Marges the provided radar field in ds_rad to CML observations by
@@ -809,9 +782,6 @@ def merge_ked_blockkriging(
     variogram: function
         A user defined python function defining the variogram. Takes a distance
         h and returns the expected variance.
-    where_rad: bool
-        If set to True only do adjustment in cells where radar observes
-        rainfall. If set to false to adjustment in those cells as well.
 
     Returns
     -------
@@ -843,10 +813,6 @@ def merge_ked_blockkriging(
 
     # Skip radar pixels with np.nan
     mask = np.isnan(da_rad.data)
-
-    # Skip radar pixels with no rainfall
-    if where_rad:
-        mask = mask | (da_rad.data == 0)
 
     # Gridpoints to use
     xgrid_t, ygrid_t = xgrid[~mask], ygrid[~mask]

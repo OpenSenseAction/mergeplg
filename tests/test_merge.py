@@ -164,7 +164,6 @@ def test_merge_additive_blockkriging():
         ds_cmls.R_diff.isel(time=0).data,
         x0,
         variogram,
-        where_rad=True,
     )
 
     # Is not strightforward to check the line integrals as that would be an
@@ -206,7 +205,6 @@ def test_merge_ked_blockkriging():
         ds_cmls.R.isel(time=0).data,
         x0,
         variogram,
-        where_rad=True,
     )
 
     # Is not strightforward to check the line integrals as that would be an
