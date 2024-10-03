@@ -2,3 +2,7 @@
 
 submodules for RADOLAN adjustment
 """
+
+__all__ = ["processing"]
+
+from . import processing
