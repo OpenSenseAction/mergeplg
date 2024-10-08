@@ -3,6 +3,6 @@
 submodules for RADOLAN adjustment
 """
 
-__all__ = ["processing"]
+__all__ = ["adjust", "processing", "check_data_struct"]
 
-from . import processing
+from . import adjust, check_data_struct, processing
