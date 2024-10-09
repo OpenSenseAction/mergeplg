@@ -125,7 +125,7 @@ def rh_to_rw(
             intersect_weights=intersect_weights.sel(cml_id=cml_ids_df.values),
         )
         df_stations_t.loc[sensor_is_cml, "radar_RB_rainfall"] = (
-            radar_along_cmls.isel(time=0).sel(cml_id=cml_ids_df.values).values  # noqa: PD011
+            radar_along_cmls.isel(time=0).sel(cml_id=cml_ids_df.values).values
         )
 
     # Diff and fact

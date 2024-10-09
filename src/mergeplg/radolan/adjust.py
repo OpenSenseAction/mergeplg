@@ -233,7 +233,7 @@ def get_grid_rainfall_at_points(da_grid, df_stations, nnear=9, stat="best"):
 
     return raw_at_obs_adjuster(
         obs=df_stations.loc[:, "rainfall_amount"].values,
-        raw=da_grid.values.flatten(),  # noqa: PD011
+        raw=da_grid.values.flatten(),
     )
 
 
@@ -344,7 +344,7 @@ def bogra_like_smoothing(
     )
 
     if isinstance(radar_img, xr.core.dataarray.DataArray):
-        radar_img_filtered = radar_img.values.copy()  # noqa: PD011
+        radar_img_filtered = radar_img.values.copy()
     else:
         radar_img_filtered = radar_img.copy()
 
