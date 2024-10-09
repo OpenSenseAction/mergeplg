@@ -192,3 +192,62 @@ def test_interpolate_station_values():
             ]
         ),
     )
+
+
+def test_bogra_like_smoothing():
+    ds_radolan, df_stations = get_test_data()
+    RY_sum = ds_radolan.RY.sum(dim="time", min_count=12)
+
+    # Test with xarray.DataArray
+    smoothed_data = mrg.radolan.adjust.bogra_like_smoothing(RY_sum)
+    np.testing.assert_array_almost_equal(
+        (smoothed_data - RY_sum).data[138:142, 679:682],
+        np.array(
+            [
+                [0.0, 0.0, -0.03349609],
+                [0.0, -1.08796875, 0.0],
+                [-0.2034375, -0.99517578, 0.0],
+                [0.0, 0.0, -0.32083984],
+            ],
+        ),
+    )
+
+    # Test again, but with different threshold
+    smoothed_data = mrg.radolan.adjust.bogra_like_smoothing(
+        RY_sum,
+        max_allowed_relative_diff=5,
+    )
+    np.testing.assert_array_almost_equal(
+        (smoothed_data - RY_sum).data[138:142, 679:682],
+        np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [0.0, -0.98375, 0.0],
+                [0.0, -0.83375, 0.0],
+                [0.0, 0.0, 0.0],
+            ],
+        ),
+    )
+
+    # Test again, but with high threshold and less iterations, just to check
+    # that the `break` in the bogra loop is called.
+    smoothed_data = mrg.radolan.adjust.bogra_like_smoothing(
+        RY_sum, max_allowed_relative_diff=10, max_iterations=10
+    )
+    np.testing.assert_array_almost_equal(
+        (smoothed_data - RY_sum).data[138:142, 679:682],
+        np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [0.0, 0, 0.0],
+                [0.0, 0, 0.0],
+                [0.0, 0.0, 0.0],
+            ],
+        ),
+    )
+
+    # Test that results are the same for numpy array xarray.DataArray as input
+    np.testing.assert_array_almost_equal(
+        mrg.radolan.adjust.bogra_like_smoothing(RY_sum).values,
+        mrg.radolan.adjust.bogra_like_smoothing(RY_sum.values),
+    )
