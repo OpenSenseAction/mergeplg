@@ -22,7 +22,7 @@ def get_test_data():
 
 
 def test_get_test_data():
-    # this is just to run the `get_test_data` function from above when running pytest
+    # this iiiis just to run the `get_test_data` function from above when running pytest
     _, _ = get_test_data()
 
 
@@ -101,12 +101,14 @@ def test_get_grid_rainfall_at_points():
         RY_sum,
         df_stations,
     )
+
+    df_stations_sorted = df_stations.sort_values("radar_at_gauge", kind="stable")
     np.testing.assert_array_almost_equal(
-        df_stations.sort_values("radar_at_gauge").radar_at_gauge.to_numpy()[-10:],
+        df_stations_sorted.radar_at_gauge.to_numpy()[-10:],
         np.array([4.69, 4.75, 4.76, 4.89, 5.73, 5.99, 6.39, 7.3, 7.57, 7.57]),
     )
     np.testing.assert_array_equal(
-        df_stations.sort_values("radar_at_gauge").station_id.to_numpy()[-5:],
+        df_stations_sorted.station_id.to_numpy()[-5:],
         np.array(["O980", "O811", "M500", "F598", "O708"], dtype=object),
     )
 
