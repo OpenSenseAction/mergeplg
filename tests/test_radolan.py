@@ -89,3 +89,21 @@ def test_label_relevant_audit_interim_in_gageset_random_start_index():
 
     # This fails if all runs with random start index produced the same station_id
     assert i < N_random_runs - 1
+
+
+def test_get_grid_rainfall_at_points():
+    ds_radolan, df_stations = get_test_data()
+    RY_sum = ds_radolan.RY.sum(dim="time", min_count=12)
+
+    df_stations["radar_at_gauge"] = mrg.radolan.adjust.get_grid_rainfall_at_points(
+        RY_sum,
+        df_stations,
+    )
+    np.testing.assert_array_almost_equal(
+        df_stations.sort_values("radar_at_gauge").radar_at_gauge.to_numpy()[-10:],
+        np.array([4.69, 4.75, 4.76, 4.89, 5.73, 5.99, 6.39, 7.3, 7.57, 7.57]),
+    )
+    np.testing.assert_array_equal(
+        df_stations.sort_values("radar_at_gauge").station_id.to_numpy()[-5:],
+        np.array(["O980", "O811", "M500", "F598", "O708"], dtype=object),
+    )
