@@ -22,7 +22,7 @@ def get_test_data():
 
 
 def test_get_test_data():
-    # this iiiis just to run the `get_test_data` function from above when running pytest
+    # this is just to run the `get_test_data` function from above when running pytest
     _, _ = get_test_data()
 
 
