@@ -6,8 +6,8 @@ import mergeplg as mrg
 
 
 def get_test_data():
-    df_stations = pd.read_csv("test_data/radolan_rain_gauge_data_new.csv", index_col=1)
-    ds_radolan = xr.open_dataset("test_data/radolan_ry_data.nc")
+    df_stations = pd.read_csv("test_data/radolan_rain_gauge_data.csv", index_col=0)
+    ds_radolan = xr.open_dataset("test_data/radolan_ry_data_compressed.nc")
 
     assert len(ds_radolan.time) == 12
 
