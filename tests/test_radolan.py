@@ -107,3 +107,88 @@ def test_get_grid_rainfall_at_points():
         df_stations.sort_values("radar_at_gauge").station_id.to_numpy()[-5:],
         np.array(["O980", "O811", "M500", "F598", "O708"], dtype=object),
     )
+
+
+def test_interpolate_station_values():
+    ds_radolan, df_stations = get_test_data()
+    RY_sum = ds_radolan.RY.sum(dim="time", min_count=12)
+
+    interpolated_grid = mrg.radolan.adjust.interpolate_station_values(
+        df_stations=df_stations,
+        col_name="rainfall_amount",
+        ds_grid=RY_sum,
+        nnear=8,
+        p=2,
+        max_distance=60,
+        idw_method="standard",
+    )
+    np.testing.assert_array_almost_equal(
+        interpolated_grid.data[410:414, 710:714],
+        np.array(
+            [
+                [2.72487096, 2.800001, 2.83147212, 2.82727883],
+                [2.80509236, 2.88496315, 2.92157422, 2.92241554],
+                [2.94312663, 3.00469669, 3.03208744, 3.02933747],
+                [3.13244699, 3.15721331, 3.16299551, 3.14901499],
+            ]
+        ),
+    )
+
+    interpolated_grid = mrg.radolan.adjust.interpolate_station_values(
+        df_stations=df_stations,
+        col_name="rainfall_amount",
+        ds_grid=RY_sum,
+        nnear=8,
+        p=2,
+        max_distance=60,
+        idw_method="radolan",
+    )
+    np.testing.assert_array_almost_equal(
+        interpolated_grid.data[410:414, 710:714],
+        np.array(
+            [
+                [2.68921691, 2.6993467, 2.67471823, 2.61990556],
+                [2.78720804, 2.8033063, 2.78501507, 2.73558897],
+                [2.93226004, 2.93803843, 2.91615941, 2.86679836],
+                [3.12492011, 3.10614845, 3.07118028, 3.01634675],
+            ]
+        ),
+    )
+
+    # test filling of NaNs (first check that NaNs are there at this specific
+    # location, which is at the edge of max_distance for interpolation, and then do
+    # interpolation again with filling the NaNs)
+    nan = np.nan
+    np.testing.assert_array_almost_equal(
+        interpolated_grid.data[355:359, 800:804],
+        np.array(
+            [
+                [nan, nan, nan, nan],
+                [1.02, 1.02, nan, nan],
+                [1.23399745, 1.02, 1.02, 1.02],
+                [1.23115475, 1.22518546, 1.21935005, 1.02],
+            ]
+        ),
+    )
+
+    interpolated_grid = mrg.radolan.adjust.interpolate_station_values(
+        df_stations=df_stations,
+        col_name="rainfall_amount",
+        ds_grid=RY_sum,
+        nnear=8,
+        p=2,
+        max_distance=60,
+        idw_method="radolan",
+        fill_value=0,
+    )
+    np.testing.assert_array_almost_equal(
+        interpolated_grid.data[355:359, 800:804],
+        np.array(
+            [
+                [0, 0, 0, 0.0],
+                [1.02, 1.02, 0, 0],
+                [1.23399745, 1.02, 1.02, 1.02],
+                [1.23115475, 1.22518546, 1.21935005, 1.02],
+            ]
+        ),
+    )
