@@ -209,6 +209,32 @@ def test_interpolate_station_values():
         ),
     )
 
+    # test case where all stations are NaN
+    df_stations_all_nan = df_stations.copy()
+    df_stations_all_nan["rainfall_amount"] = np.nan
+
+    interpolated_grid = mrg.radolan.adjust.interpolate_station_values(
+        df_stations=df_stations_all_nan,
+        col_name="rainfall_amount",
+        ds_grid=RY_sum,
+        nnear=8,
+        p=2,
+        max_distance=60,
+        idw_method="radolan",
+    )
+    nan = np.nan
+    np.testing.assert_array_almost_equal(
+        interpolated_grid.data[355:359, 800:804],
+        np.array(
+            [
+                [nan, nan, nan, nan],
+                [nan, nan, nan, nan],
+                [nan, nan, nan, nan],
+                [nan, nan, nan, nan],
+            ]
+        ),
+    )
+
 
 def test_bogra_like_smoothing():
     ds_radolan, df_stations = get_test_data()
