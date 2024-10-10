@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 import xarray as xr
 
 import mergeplg as mrg
@@ -91,6 +92,17 @@ def test_label_relevant_audit_interim_in_gageset_random_start_index():
 
     # This fails if all runs with random start index produced the same station_id
     assert i < N_random_runs - 1
+
+
+def test_label_relevant_audit_interim_in_gageset_raise():
+    ds_radolan, df_stations = get_test_data()
+    RY_sum = ds_radolan.RY.sum(dim="time", min_count=12)
+    with pytest.raises(TypeError):
+        mrg.radolan.adjust.label_relevant_audit_interim_in_gageset(
+            df_gageset_t=df_stations,
+            da_radolan=RY_sum,
+            start_index_in_relevant=1.42,
+        )
 
 
 def test_get_grid_rainfall_at_points():
