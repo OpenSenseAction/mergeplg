@@ -19,7 +19,7 @@ def load_and_transform_openmrg_data():
         ds_gauges_smhi: SMHI gauge
 
     """
-    data_path = importlib_files("mergeplg") / "../../docs/notebooks/data"
+    data_path = importlib_files("mergeplg") / "example_data"
     ds_gauges = xr.open_dataset(Path(data_path) / "openmrg_municp_gauge.nc")
     ds_cmls = xr.open_dataset(Path(data_path) / "openmrg_cml.nc")
     ds_rad = xr.open_dataset(Path(data_path) / "openmrg_rad.nc")
