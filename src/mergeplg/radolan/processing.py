@@ -42,34 +42,46 @@ def rh_to_rw(
 ):
     """Produce RW from RH.
 
-    ds_radolan_t
-        bla
-    df_stations_t
-        bla
-    start_index_in_relevant_stations
-        bla
-    idw_method
-        bla
-    nnear
-        bla
-    p
-        bla
-    max_distance
-        bla
-    bogra_kwargs
-        bla
+    ds_radolan_t : xr.Dataset
+        Radar data which has to contain a data_var `RH`. See the function
+        `check_data_struct.check_radar_dataset_or_dataarray` for details
+        of what structure is expected
+    df_stations_t : pd.DataFrame
+        Data from rain gauges or CMLs as pd.DataFrame. See the function
+        `check_data_struct.check_station_dataframe` for the expected
+        structure.
+    start_index_in_relevant_stations : str or int
+        If set to "random" (which is the default) a random station will be picked as
+        starting point for selecting the audit stations.
+    idw_method : str
+        With the default ("radolan") an exponential decay with range, as in the
+        original RADOLAN implementation, is used for IDW. When set to "standard"
+        a normal IDW decay with 1/d**p is used.
+    nnear : int
+        Number of nearest neighbors to use for interpolation.
+    p : float
+        The exponent used for "standard" IDW with 1/d**p.
+    max_distance : int or float
+        The maximum distance around a station (or mid-point of a CML) to use
+        for interpolation.
+    bogra_kwargs : dict
+        Parameters for the BOGRA smoothing function, see `adjust.bogra_like_smoothing`
+        for details.
     allow_gauge_and_cml : bool, optional
         If this is set to True, the column `sensor_type` has to be present in
         `df_stations_t` with either 'gauge_dwd' or 'cml_ericsson' as entry. Based
         on that an index will be created that is then used to select gauge and CML
         at the relevant parts of the code, currently important when getting the
         radar values at gauge or along CML.
-    intersect_weights
-        bla
+    intersect_weights : xr.Dataset
+        The CML intersection weights with the radar grid as returned by the function
+        `poligrain.spatial.calc_sparse_intersect_weights_for_several_cmls`.
 
     Returns
     -------
-    foo
+    tuple (ds_radolan_t, df_stations_t)
+        ds_radolan_t: All radar fields, also the intermediate ones used for adjustment
+        df_stations_t: All station (and CML) data also with intermediate data
 
     """
     # It is important that we do not have a time dimension, not even one with
