@@ -7,6 +7,6 @@ from __future__ import annotations
 
 __version__ = "0.0.0"
 
-__all__ = ["__version__", "radolan"]
+__all__ = ["__version__", "io", "radolan"]
 
-from . import radolan
+from . import io, radolan
