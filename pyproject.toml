@@ -85,6 +85,9 @@ addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
 filterwarnings = [
   "error",
+  # TODO: Remove the line below once the problem is fixed upstream,
+  # see https://github.com/OpenSenseAction/poligrain/pull/69
+  "ignore::DeprecationWarning:xarray.core.common:157",
 ]
 log_cli_level = "INFO"
 testpaths = [
