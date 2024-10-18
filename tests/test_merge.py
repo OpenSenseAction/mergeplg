@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 import xarray as xr
 
-from mergeplg import merge
+from mergeplg import merge, merge_functions
 
 ds_cmls = xr.Dataset(
     data_vars={
@@ -42,18 +42,20 @@ ds_rad = xr.Dataset(
 
 def test_calculate_cml_geometry():
     # Test that the CML geometry is correctly esimtated
-    y, x = merge.calculate_cml_geometry(
+    y, x = merge_functions.calculate_cml_geometry(
         ds_cmls.isel(cml_id=[1]),
-        disc=2,  # divides the line into two intervals, 3 points
-    )[0]
+        discretization=2,  # divides the line into two intervals, 3 points
+    ).data[0]
     assert (y == np.array([-1, 0, 1])).all()
     assert (x == np.array([0, 1, 2])).all()
 
 
 def test_block_points_to_lengths():
     # Check that the length matrix is correctly estimated
-    line = merge.block_points_to_lengths(
-        merge.calculate_cml_geometry(ds_cmls.isel(cml_id=[0, 1]), disc=2)
+    line = merge_functions.block_points_to_lengths(
+        merge_functions.calculate_cml_geometry(
+            ds_cmls.isel(cml_id=[0, 1]), discretization=2
+        ).data
     )
     l0l0 = line[0, 0]  # Lengths from link0 to link0
     l0l1 = line[0, 1]  # Lengths from link0 to link0
@@ -126,7 +128,7 @@ def test_merge_additive_idw():
             ds_cmls.x.data.reshape(-1, 1),
         ]
     )
-    additive_idw = merge.merge_additive_idw(
+    additive_idw = merge_functions.merge_additive_idw(
         ds_rad.R.isel(time=0), ds_cmls.R_diff.isel(time=0).data.ravel(), x0
     )
 
@@ -152,14 +154,14 @@ def test_merge_additive_blockkriging():
         ds_cmls["R_diff"].loc[{"cml_id": cml_id}] = cml_r - rad_r
 
     # Calculate CML geometry
-    x0 = merge.calculate_cml_geometry(ds_cmls)
+    x0 = merge_functions.calculate_cml_geometry(ds_cmls).data
 
     # Define variogram (exponential)
     def variogram(h):  # Exponential variogram
         return 0 + (1 - 0) * (1 - np.exp(-h * 3 / 1))
 
     # do additive blockkriging
-    additive_blockkriging = merge.merge_additive_blockkriging(
+    additive_blockkriging = merge_functions.merge_additive_blockkriging(
         ds_rad.R.isel(time=0),
         ds_cmls.R_diff.isel(time=0).data,
         x0,
@@ -192,14 +194,14 @@ def test_merge_ked_blockkriging():
         ds_cmls["cml_rad"].loc[{"cml_id": cml_id}] = rad_r
 
     # Calculate CML geometry
-    x0 = merge.calculate_cml_geometry(ds_cmls)
+    x0 = merge.calculate_cml_geometry(ds_cmls).data
 
     # Define variogram (exponential)
     def variogram(h):  # Exponential variogram
         return 0 + (1 - 0) * (1 - np.exp(-h * 3 / 1))
 
     # do additive blockkriging
-    ked = merge.merge_ked_blockkriging(
+    ked = merge_functions.merge_ked_blockkriging(
         ds_rad.R.isel(time=0),
         ds_cmls.cml_rad.isel(time=0).data,
         ds_cmls.R.isel(time=0).data,
