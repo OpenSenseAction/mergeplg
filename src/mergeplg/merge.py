@@ -495,9 +495,9 @@ class MergeMultiplicativeIDW(Merge):
         rad, obs, x0 = self.radar_at_ground_(da_rad, da_cml=da_cml, da_gauge=da_gauge)
 
         # Calculate radar-instrument difference if radar has observation
-        maskZero = rad > 0
+        mask_zero = rad > 0
         diff = np.full_like(obs, np.nan, dtype=np.float64)
-        diff[maskZero] = obs[maskZero] / rad[maskZero]
+        diff[mask_zero] = obs[mask_zero] / rad[mask_zero]
 
         # filter out diff values and nans
         keep = np.where((~np.isnan(diff)) & (diff < np.nanquantile(diff, 0.95)))[0]
