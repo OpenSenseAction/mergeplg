@@ -11,6 +11,70 @@ from scipy import stats
 from sklearn.neighbors import KNeighborsRegressor
 
 
+def merge_multiplicative_idw(da_rad, cml_ratio, x0):
+    """Merge CML and radar using an multiplicative approach and the CML midpoint.
+
+    Merges the CML and radar field by interpolating the ratio between
+    radar and CML using IDW from sklearn.
+
+    Parameters
+    ----------
+    da_rad: xarray.DataArray
+        Gridded radar data.
+    cml_ratio: numpy.array
+        Ratio between the CML and radar observations at the CML locations.
+    x0: numpy.array
+        Coordinates of CML midpoints given as [[cml_1_y, cml_1_x], ..
+        [cml_n_y, cml_n_x] using the same order as cml_ratio.
+
+    Returns
+    -------
+    da_rad_out: xarray.DataArray
+        DataArray with the same structure as the ds_rad but with the CML
+        adjusted radar field.
+
+    """
+    # Get radar grid as numpy arrays
+    xgrid, ygrid = da_rad.xs.data, da_rad.ys.data
+
+    # Create array for storing interpolated values
+    shift = np.zeros(xgrid.shape)
+
+    # Gridpoints to interpolate, skip cells with nan
+    mask = np.isnan(da_rad.data)
+
+    # Check that we have any data
+    if np.sum(~mask) > 0:
+        coord_pred = np.hstack(
+            [ygrid[~mask].reshape(-1, 1), xgrid[~mask].reshape(-1, 1)]
+        )
+
+        # IDW interpolator kdtree, only supports IDW p=1
+        idw_interpolator = KNeighborsRegressor(
+            n_neighbors=cml_ratio.size if cml_ratio.size <= 8 else 8,
+            weights="distance",  # Use distance for setting weights
+        )
+        idw_interpolator.fit(x0, cml_ratio)
+
+        estimate = idw_interpolator.predict(coord_pred)
+        shift[~mask] = estimate
+
+    # create xarray object similar to ds_rad
+    ds_rad_out = da_rad.rename("R").to_dataset().copy()
+
+    # Set areas with nan to zero
+    shift[np.isnan(shift)] = 0
+
+    # Do adjustment
+    adjusted = shift * ds_rad_out.R.data
+
+    # Store shift data
+    ds_rad_out["adjusted"] = (("y", "x"), adjusted)
+
+    # Return dataset with adjusted values
+    return ds_rad_out.adjusted
+
+
 def merge_additive_idw(da_rad, cml_diff, x0):
     """Merge CML and radar using an additive approach and the CML midpoint.
 
