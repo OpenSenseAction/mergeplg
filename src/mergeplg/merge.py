@@ -155,11 +155,11 @@ class Merge:
                     # Add to existing x0
                     self.x0_cml = xr.concat([self.x0_cml, x0_cml_add], dim="cml_id")
 
-            # Sort x0_cml and self.intersect_weights 
-            self.x0_cml = self.x0_cml.sel(cml_id=da_cml.cml_id.data) 
+            # Sort x0_cml and self.intersect_weights
+            self.x0_cml = self.x0_cml.sel(cml_id=da_cml.cml_id.data)
             self.intersect_weights = self.intersect_weights.sel(
                 cml_id=da_cml.cml_id.data
-                )
+            )
 
         # If gauge data is present
         if da_gauge is not None:
@@ -298,11 +298,11 @@ class Merge:
                     # Add new x0 to self.x0_cml
                     self.x0_cml = xr.concat([self.x0_cml, x0_cml_add], dim="cml_id")
 
-            # Sort x0_cml and self.intersect_weights 
+            # Sort x0_cml and self.intersect_weights
             self.x0_cml = self.x0_cml.sel(cml_id=da_cml.cml_id.data)
             self.intersect_weights = self.intersect_weights.sel(
                 cml_id=da_cml.cml_id.data
-                ) 
+            )
 
         # If gauge data is present
         if da_gauge is not None:
@@ -497,9 +497,9 @@ class MergeMultiplicativeIDW(Merge):
         rad, obs, x0 = self.radar_at_ground_(da_rad, da_cml=da_cml, da_gauge=da_gauge)
 
         # Calculate radar-instrument difference if radar has observation
-        maskZero = rad > 0 
+        maskZero = rad > 0
         diff = np.full_like(obs, np.nan, dtype=np.float64)
-        diff[maskZero] = obs[maskZero] / rad[maskZero]   
+        diff[maskZero] = obs[maskZero] / rad[maskZero]
 
         # filter out diff values and nans
         keep = np.where((~np.isnan(diff)) & (diff < np.nanquantile(diff, 0.95)))[0]
