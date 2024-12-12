@@ -196,8 +196,6 @@ class Merge:
                 # Calculate gauge coordinates
                 self.x0_gauge = merge_functions.calculate_gauge_midpoint(da_gauge)
 
-
-
     def update_block_(self, da_rad, discretization, da_cml=None, da_gauge=None):
         """Update weights and x0 geometry for CML and gauge assuming block data
 
