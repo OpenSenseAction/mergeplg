@@ -160,7 +160,7 @@ def merge_multiplicative_idw(
     shift[np.isnan(shift)] = 0
 
     # Do adjustment
-    adjusted = shift + ds_rad_out.R.data
+    adjusted = shift * ds_rad_out.R.data
 
     # Set negative values to zero
     adjusted = np.where(adjusted > 0, adjusted, 0)

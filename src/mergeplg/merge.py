@@ -442,10 +442,10 @@ class Merge:
 
 
 class MergeMultiplicativeIDW(Merge):
-    """Merge CML and radar using an multiplicative IDW (CML midpoint).
+    """Merge CML and radar using an additive IDW (CML midpoint).
 
     Merges the provided radar field in ds_rad to CML observations by
-    interpolating the ratio between the CML and radar observations using
+    interpolating the difference between the CML and radar observations using
     IDW.
     """
 
@@ -463,7 +463,16 @@ class MergeMultiplicativeIDW(Merge):
         """
         self.update_(da_rad, da_cml=da_cml, da_gauge=da_gauge)
 
-    def adjust(self, da_rad, da_cml=None, da_gauge=None):
+    def adjust(
+        self,
+        da_rad,
+        da_cml=None,
+        da_gauge=None,
+        p=2,
+        idw_method="radolan",
+        nnear=8,
+        max_distance=60000,
+    ):
         """Adjust radar field for one time step.
 
         Adjust radar field for one time step. The function assumes that the
@@ -481,6 +490,14 @@ class MergeMultiplicativeIDW(Merge):
         da_gauge: xarray.DataArray
             Gauge observations. Must contain the coordinates for the rain gauge
             positions (lat, lon) as well as the projected coordinates (x, y).
+        p: float
+            IDW interpolation parameter
+        idw_method: str
+            by default "radolan"
+        nnear: int
+            number of neighbours to use for interpolation
+        max_distance: float
+            max distance allowed interpolation distance
 
         Returns
         -------
@@ -499,7 +516,7 @@ class MergeMultiplicativeIDW(Merge):
         diff = np.full_like(obs, np.nan, dtype=np.float64)
         diff[mask_zero] = obs[mask_zero] / rad[mask_zero]
 
-        # filter out diff values and nans
+        # Get index of not-nan obs
         keep = np.where((~np.isnan(diff)) & (diff < np.nanquantile(diff, 0.95)))[0]
 
         # Check that that there is enough observations
@@ -510,11 +527,15 @@ class MergeMultiplicativeIDW(Merge):
             # Remove radar time dimension
             da_rad_t = da_rad.sel(time=time)
 
-            # do multiplicative IDW merging
+            # do addtitive IDW merging
             adjusted = merge_functions.merge_multiplicative_idw(
                 xr.where(da_rad_t > 0, da_rad_t, np.nan),  # function skips nan
                 diff[keep],
                 x0[keep, :],
+                p=p,
+                idw_method=idw_method,
+                nnear=nnear,
+                max_distance=max_distance,
             )
 
             # Replace nan with original radar data (so that da_rad nan is kept)
