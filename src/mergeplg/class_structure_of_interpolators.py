@@ -6,6 +6,8 @@ from abc import abstractmethod
 import numpy as np
 import xarray as xr
 
+import poligrain as plg
+
 
 class PointsToGridInterpolator:
     def __init__(self, ds_points, ds_grid):
@@ -73,7 +75,9 @@ class PointsToGridInterpolatorIDW(PointsToGridInterpolator):
 
         self.x = ds_points.x
         self.y = ds_points.y
-        return Invdisttree(X=np.array(list(zip(ds_points.x.data, ds_points.y.data))))
+        return Invdisttree(
+            X=np.array(list(zip(ds_points.x.data, ds_points.y.data, strict=False)))
+        )
 
     def __call__(self, da_points):
         self._interpolator = self._maybe_update_interpolator(da_points)
@@ -84,7 +88,6 @@ class PointsToGridInterpolatorIDW(PointsToGridInterpolator):
             p=self.p,
             max_distance=self.max_distance,
         )
-        print(self.xy_radar)
         return xr.DataArray(
             dims=["y", "x"],
             coords={
@@ -97,6 +100,7 @@ class PointsToGridInterpolatorIDW(PointsToGridInterpolator):
         )
 
 
+# WIP: not yet working, just documenting the idea
 class LinesToGridInterpolator:
     def __init__(self, x1, y1, x2, y2, x_grid, y_grid):
         self.x1 = x1
@@ -131,6 +135,7 @@ class LinesToGridBlockKriging(LinesToGridInterpolator):
     pass
 
 
+# not really used now, might not be needed
 class MergeBase:
     def __init__(self, ds_grid, ds_points=None, ds_lines=None):
         self.ds_grid = ds_grid
@@ -142,9 +147,41 @@ class MergeBase:
         raise NotImplementedError()
 
 
-class MergeIDW(MergeBase):
+class MergeAdditiveIDW(MergeBase):
     def __init__(
-        self, ds_grid, ds_points=None, ds_lines=None, max_distance=10e3, min_points=5
+        self,
+        ds_grid,
+        nnear,
+        p,
+        max_distance,
+        exclude_nan,
+        ds_points=None,
+        ds_lines=None,
     ):
         super().__init__(ds_grid, ds_points, ds_lines)
-        idw_interpolator = PointsToGridInterpolatorIDW()
+        self._idw_interpolator = PointsToGridInterpolatorIDW(
+            ds_points,
+            ds_grid,
+            nnear=nnear,
+            p=p,
+            exclude_nan=exclude_nan,
+            max_distance=max_distance,
+        )
+
+        self._get_grid_at_points = plg.spatial.GridAtPoints(
+            da_gridded_data=ds_grid,
+            da_point_data=ds_points,
+            nnear=9,
+            stat="best",
+        )
+
+    def __call__(self, da_grid, da_points, da_lines=None):
+        # some quick hacks with exapdn_dims('time') and .isel(time=0) below
+        # because GridAtPoints expects a time dim and IDW interpolator does not.
+        grid_at_points = self._get_grid_at_points(
+            da_gridded_data=da_grid.expand_dims("time"),
+            da_point_data=da_points.expand_dims("time"),
+        )
+        diff = da_points - grid_at_points
+        diff_grid = self._idw_interpolator(da_points=diff.isel(time=0))
+        return da_grid + diff_grid
