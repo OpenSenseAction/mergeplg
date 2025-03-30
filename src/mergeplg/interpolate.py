@@ -73,6 +73,25 @@ class InterpolateIDW(Base):
             DataArray with the same structure as the ds_rad but with the
             interpolated field.
         """
+        time_dim_was_expanded = False
+        if da_cml is not None and "time" not in da_cml.dims:
+            da_cml = da_cml.copy().expand_dims("time")
+            time_dim_was_expanded = True
+        if da_gauge is not None and "time" not in da_gauge.dims:
+            da_gauge = da_gauge.copy().expand_dims("time")
+            time_dim_was_expanded = True
+        if "time" not in da_grid.dims:
+            da_grid = da_grid.copy().expand_dims("time")
+            time_dim_was_expanded = True
+        if da_cml is not None and np.any(da_grid.time != da_cml.time):
+            msg = "`da_grid` and `da_cml` DataArray need to have matching time stamps."
+            raise ValueError(msg)
+        if da_gauge is not None and np.any(da_grid.time != da_gauge.time):
+            msg = (
+                "`da_grid` and `da_gauge` DataArray need to have matching time stamps."
+            )
+            raise ValueError(msg)
+
         # Update x0 geometry for CML and gauge
         self.update(da_cml=da_cml, da_gauge=da_gauge)
 
@@ -110,9 +129,13 @@ class InterpolateIDW(Base):
             max_distance=max_distance,
         ).reshape(da_grid.x_grid.shape)
 
-        return xr.DataArray(
+        da_interpolated = xr.DataArray(
             data=[interpolated], coords=da_grid.coords, dims=da_grid.dims
         )
+        if time_dim_was_expanded:
+            da_interpolated = da_interpolated.isel(time=0)
+            da_interpolated = da_interpolated.drop_vars("time")
+        return da_interpolated
 
 
 class InterpolateOrdinaryKriging(Base):
