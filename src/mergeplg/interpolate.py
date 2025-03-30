@@ -180,6 +180,8 @@ class InterpolateOrdinaryKriging(Base):
         Interpolates ground observations for one time step. The function assumes
         that the x0 are updated using the update class method.
 
+        Input data can have a time dimension of length 1 or no time dimension.
+
         Parameters
         ----------
         da_grid: xarray.DataArray
