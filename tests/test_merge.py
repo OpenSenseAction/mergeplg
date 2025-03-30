@@ -140,6 +140,25 @@ def test_MergeDifferenceIDW():
         assert gauge_r == merge_r
 
 
+def test_MergeDifferenceIDW_witout_time_dim_input_data():
+    merge_IDW = merge.MergeDifferenceIDW(min_observations=2)
+    adjusted_with_time_dim = merge_IDW.adjust(
+        da_rad=ds_rad.R.isel(time=[0]),
+        # da_cml=ds_cmls.R.isel(time=[0]),
+        da_gauge=ds_gauges.R.isel(time=[0]),
+        method="additive",
+    ).isel(time=0)
+    adjusted_without_time_dim = merge_IDW.adjust(
+        da_rad=ds_rad.R.isel(time=0),
+        # da_cml=ds_cmls.R.isel(time=0),
+        da_gauge=ds_gauges.R.isel(time=0),
+        method="additive",
+    )
+    np.testing.assert_almost_equal(
+        adjusted_with_time_dim.data, adjusted_without_time_dim.data
+    )
+
+
 def test_MergeDifferenceOrdinaryKriging():
     # CML and rain gauge overlapping sets
     da_cml_t1 = ds_cmls.isel(cml_id=[2, 1], time=[0]).R
