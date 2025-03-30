@@ -209,6 +209,16 @@ class InterpolateOrdinaryKriging(Base):
             DataArray with the same structure as the ds_rad but with the
             interpolated field.
         """
+        time_dim_was_expanded = False
+        if da_cml is not None and "time" not in da_cml.dims:
+            da_cml = da_cml.copy().expand_dims("time")
+            time_dim_was_expanded = True
+        if da_gauge is not None and "time" not in da_gauge.dims:
+            da_gauge = da_gauge.copy().expand_dims("time")
+            time_dim_was_expanded = True
+        if "time" not in da_grid.dims:
+            da_grid = da_grid.copy().expand_dims("time")
+            time_dim_was_expanded = True
         # Initialize variogram parameters
         if variogram_parameters is None:
             variogram_parameters = {"sill": 0.9, "range": 5000, "nugget": 0.1}
@@ -260,6 +270,10 @@ class InterpolateOrdinaryKriging(Base):
                 obs[keep].size if obs[keep].size <= nnear else nnear,
             )
 
-        return xr.DataArray(
+        da_interpolated = xr.DataArray(
             data=[interpolated], coords=da_grid.coords, dims=da_grid.dims
         )
+        if time_dim_was_expanded:
+            da_interpolated = da_interpolated.isel(time=0)
+            da_interpolated = da_interpolated.drop_vars("time")
+        return da_interpolated

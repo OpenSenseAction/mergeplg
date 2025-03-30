@@ -139,3 +139,32 @@ def test_idw_interpolate_with_data_without_time_dim():
     np.testing.assert_almost_equal(
         R_grid_idw_no_time_dim.data, R_grid_idw_with_time_dim.data
     )
+
+
+def test_ok_interpolate_with_data_without_time_dim():
+    ok_interpolator = interpolate.InterpolateOrdinaryKriging(min_observations=2)
+    # Make sure that the interpolation works with and without time dimension
+    # in the supplied data arrays and that resulta are the same
+    R_grid_idw_no_time_dim = ok_interpolator.interpolate(
+        da_grid=ds_rad.R.isel(time=0),
+        da_cml=ds_cmls.R.isel(time=0),
+    )
+    R_grid_idw_with_time_dim = ok_interpolator.interpolate(
+        da_grid=ds_rad.R.isel(time=[0]),
+        da_cml=ds_cmls.R.isel(time=[0]),
+    ).isel(time=0)
+    np.testing.assert_almost_equal(
+        R_grid_idw_no_time_dim.data, R_grid_idw_with_time_dim.data
+    )
+    # Same with gauge data ds_geauges instead of ds_cmls
+    R_grid_idw_no_time_dim = ok_interpolator.interpolate(
+        da_grid=ds_rad.R.isel(time=0),
+        da_gauge=ds_gauges.R.isel(time=0),
+    )
+    R_grid_idw_with_time_dim = ok_interpolator.interpolate(
+        da_grid=ds_rad.R.isel(time=[0]),
+        da_gauge=ds_gauges.R.isel(time=[0]),
+    ).isel(time=0)
+    np.testing.assert_almost_equal(
+        R_grid_idw_no_time_dim.data, R_grid_idw_with_time_dim.data
+    )
