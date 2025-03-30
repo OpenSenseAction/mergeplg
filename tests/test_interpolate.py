@@ -123,3 +123,19 @@ def test_idw_interpolate_with_data_without_time_dim():
     np.testing.assert_almost_equal(
         R_grid_idw_no_time_dim.data, R_grid_idw_with_time_dim.data
     )
+    # Same with gauge data ds_geauges instead of ds_cmls
+    R_grid_idw_no_time_dim = idw_interpolator.interpolate(
+        da_grid=ds_rad.R.isel(time=0),
+        da_gauge=ds_gauges.R.isel(time=0),
+        p=3,
+        idw_method="standard",
+    )
+    R_grid_idw_with_time_dim = idw_interpolator.interpolate(
+        da_grid=ds_rad.R.isel(time=[0]),
+        da_gauge=ds_gauges.R.isel(time=[0]),
+        p=3,
+        idw_method="standard",
+    ).isel(time=0)
+    np.testing.assert_almost_equal(
+        R_grid_idw_no_time_dim.data, R_grid_idw_with_time_dim.data
+    )
