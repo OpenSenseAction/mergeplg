@@ -104,7 +104,7 @@ def test_blockkriging_vs_pykrige():
     np.testing.assert_almost_equal(interp_field_pykrige, interp_field)
 
 
-def test_interpolate_with_data_without_time_dim():
+def test_idw_interpolate_with_data_without_time_dim():
     idw_interpolator = interpolate.InterpolateIDW(min_observations=2)
     # Make sure that the interpolation works with and without time dimension
     # in the supplied data arrays and that resulta are the same
