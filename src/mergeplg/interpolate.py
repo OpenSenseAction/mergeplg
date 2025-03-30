@@ -51,7 +51,7 @@ class InterpolateIDW(Base):
         ----------
         da_grid: xarray.DataArray
             Dataframe providing the grid for interpolation. Must contain
-            projected xs and ys coordinates.
+            projected x_grid and y_grid coordinates.
         da_cml: xarray.DataArray
             CML observations. Must contain the projected midpoint
             coordinates (x, y).
@@ -190,7 +190,7 @@ class InterpolateOrdinaryKriging(Base):
         ----------
         da_grid: xarray.DataArray
             Dataframe providing the grid for interpolation. Must contain
-            projected xs and ys coordinates.
+            projected x_grid and y_grid coordinates.
         da_cml: xarray.DataArray
             CML observations. Must contain the projected midpoint
             coordinates (x, y).
