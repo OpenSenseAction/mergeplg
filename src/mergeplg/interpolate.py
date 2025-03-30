@@ -47,6 +47,8 @@ class InterpolateIDW(Base):
         Interpolate observations for one time step. The function assumes that
         the x0 are updated using the update class method.
 
+        Input data can have a time dimension of length 1 or no time dimension.
+
         Parameters
         ----------
         da_grid: xarray.DataArray
@@ -83,14 +85,6 @@ class InterpolateIDW(Base):
         if "time" not in da_grid.dims:
             da_grid = da_grid.copy().expand_dims("time")
             time_dim_was_expanded = True
-        if da_cml is not None and np.any(da_grid.time != da_cml.time):
-            msg = "`da_grid` and `da_cml` DataArray need to have matching time stamps."
-            raise ValueError(msg)
-        if da_gauge is not None and np.any(da_grid.time != da_gauge.time):
-            msg = (
-                "`da_grid` and `da_gauge` DataArray need to have matching time stamps."
-            )
-            raise ValueError(msg)
 
         # Update x0 geometry for CML and gauge
         self.update(da_cml=da_cml, da_gauge=da_gauge)
