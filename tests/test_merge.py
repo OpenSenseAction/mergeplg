@@ -189,6 +189,12 @@ def test_MergeDifferenceIDW_witout_time_dim_input_data():
     np.testing.assert_almost_equal(
         adjusted_with_time_dim.data, adjusted_without_time_dim.data
     )
+    # test case where also `time` coord or data_var is removed
+    adjusted_without_time_dim = merge_IDW.adjust(
+        da_rad=ds_rad.R.isel(time=0).drop_vars("time"),
+        da_gauge=ds_gauges.R.isel(time=0).drop_vars("time"),
+        method="additive",
+    )
 
 
 def test_MergeDifferenceOrdinaryKriging():
