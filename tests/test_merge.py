@@ -142,6 +142,7 @@ def test_MergeDifferenceIDW():
 
 def test_MergeDifferenceIDW_witout_time_dim_input_data():
     merge_IDW = merge.MergeDifferenceIDW(min_observations=2)
+    # test with gauge and CML data as input
     adjusted_with_time_dim = merge_IDW.adjust(
         da_rad=ds_rad.R.isel(time=[0]),
         da_cml=ds_cmls.R.isel(time=[0]),
@@ -152,6 +153,21 @@ def test_MergeDifferenceIDW_witout_time_dim_input_data():
         da_rad=ds_rad.R.isel(time=0),
         da_cml=ds_cmls.R.isel(time=0),
         da_gauge=ds_gauges.R.isel(time=0),
+        method="additive",
+    )
+    np.testing.assert_almost_equal(
+        adjusted_with_time_dim.data, adjusted_without_time_dim.data
+    )
+    # test with only CML data as input (we have to test that because
+    # ,at the time of writing, the relevant code is different)
+    adjusted_with_time_dim = merge_IDW.adjust(
+        da_rad=ds_rad.R.isel(time=[0]),
+        da_cml=ds_cmls.R.isel(time=[0]),
+        method="additive",
+    ).isel(time=0)
+    adjusted_without_time_dim = merge_IDW.adjust(
+        da_rad=ds_rad.R.isel(time=0),
+        da_cml=ds_cmls.R.isel(time=0),
         method="additive",
     )
     np.testing.assert_almost_equal(
