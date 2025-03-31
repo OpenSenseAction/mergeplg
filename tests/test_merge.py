@@ -144,13 +144,13 @@ def test_MergeDifferenceIDW_witout_time_dim_input_data():
     merge_IDW = merge.MergeDifferenceIDW(min_observations=2)
     adjusted_with_time_dim = merge_IDW.adjust(
         da_rad=ds_rad.R.isel(time=[0]),
-        # da_cml=ds_cmls.R.isel(time=[0]),
+        da_cml=ds_cmls.R.isel(time=[0]),
         da_gauge=ds_gauges.R.isel(time=[0]),
         method="additive",
     ).isel(time=0)
     adjusted_without_time_dim = merge_IDW.adjust(
         da_rad=ds_rad.R.isel(time=0),
-        # da_cml=ds_cmls.R.isel(time=0),
+        da_cml=ds_cmls.R.isel(time=0),
         da_gauge=ds_gauges.R.isel(time=0),
         method="additive",
     )
