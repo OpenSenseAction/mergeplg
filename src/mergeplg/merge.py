@@ -402,7 +402,7 @@ class MergeKrigingExternalDrift(Base):
         )
 
         # Remove radar time dimension
-        rad_field = da_rad.isel(time=0).data
+        rad_field = da_rad.isel(time=0).data if "time" in da_rad.dims else da_rad.data
 
         # Set zero values to nan, these are ignored in ked function
         rad_field[rad_field <= 0] = np.nan
@@ -422,4 +422,12 @@ class MergeKrigingExternalDrift(Base):
         # Remove negative values
         adjusted[(adjusted < 0) | np.isnan(adjusted)] = 0
 
-        return xr.DataArray(data=[adjusted], coords=da_rad.coords, dims=da_rad.dims)
+        if "time" in da_rad.dims:
+            da_adjusted = xr.DataArray(
+                data=[adjusted], coords=da_rad.coords, dims=da_rad.dims
+            )
+        else:
+            da_adjusted = xr.DataArray(
+                data=adjusted, coords=da_rad.coords, dims=da_rad.dims
+            )
+        return da_adjusted
