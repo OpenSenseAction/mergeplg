@@ -293,13 +293,13 @@ class MergeDifferenceOrdinaryKriging(Base):
 
         # Adjust radar field
         if method == "additive":
-            adjusted = interpolated + da_rad.isel(time=0).data
-            adjusted[adjusted < 0] = 0
+            adjusted = interpolated + da_rad
+            adjusted.data[adjusted < 0] = 0
         elif method == "multiplicative":
-            adjusted = interpolated * da_rad.isel(time=0).data
-            adjusted[adjusted < 0] = 0
+            adjusted = interpolated * da_rad
+            adjusted.data[adjusted < 0] = 0
 
-        return xr.DataArray(data=[adjusted], coords=da_rad.coords, dims=da_rad.dims)
+        return adjusted
 
 
 class MergeKrigingExternalDrift(Base):
