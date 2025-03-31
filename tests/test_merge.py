@@ -173,6 +173,22 @@ def test_MergeDifferenceIDW_witout_time_dim_input_data():
     np.testing.assert_almost_equal(
         adjusted_with_time_dim.data, adjusted_without_time_dim.data
     )
+    # test with only gauge data as input (at the time of writing, this
+    # did not fail and was already covered by the behavior by `get_grid_at_points`
+    # which uses `poligrain.spatial.GridAtPoints`)
+    adjusted_with_time_dim = merge_IDW.adjust(
+        da_rad=ds_rad.R.isel(time=[0]),
+        da_gauge=ds_gauges.R.isel(time=[0]),
+        method="additive",
+    ).isel(time=0)
+    adjusted_without_time_dim = merge_IDW.adjust(
+        da_rad=ds_rad.R.isel(time=0),
+        da_gauge=ds_gauges.R.isel(time=0),
+        method="additive",
+    )
+    np.testing.assert_almost_equal(
+        adjusted_with_time_dim.data, adjusted_without_time_dim.data
+    )
 
 
 def test_MergeDifferenceOrdinaryKriging():
