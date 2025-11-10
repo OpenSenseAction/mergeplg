@@ -170,6 +170,7 @@ class OBKrigTree:
         self.var_line_point = var_line_point
         self.ixs = ixs
         self.nnear = nnear
+        self.nugget = variogram(0)
 
     def __call__(self, obs, sigma=None):
         """Interpolate obs for one timestep
@@ -221,7 +222,7 @@ class OBKrigTree:
             ind = ixs[i][ixs[i] < self.n_obs][: self.nnear]
 
             # Subtract withinblock covariance of the blocks
-            target = 0.5 * self.var_within[ind] - var_line_point[i, ind]
+            target = 0.5 * (self.var_within[ind] + self.nugget) - var_line_point[i, ind]
 
             # Add non bias condition
             target = np.append(target, 1)
@@ -402,6 +403,7 @@ class BKEDTree:
         self.var_line_point = var_line_point
         self.ixs = ixs
         self.nnear = nnear
+        self.nugget = variogram(0)
 
     def __call__(
         self,
@@ -465,7 +467,7 @@ class BKEDTree:
             ind = ixs[i][ixs[i] < self.n_obs][: self.nnear]
 
             # Subtract withinblock covariance of the blocks.
-            target = 0.5 * self.var_within[ind] - var_line_point[i, ind]
+            target = 0.5 * (self.var_within[ind] + self.nugget) - var_line_point[i, ind]
 
             # Add non bias condition
             target = np.append(target, [1, rad_field[i]])
