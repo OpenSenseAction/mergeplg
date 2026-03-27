@@ -97,8 +97,8 @@ def rh_to_rw(
         raise ValueError(msg)
 
     if allow_gauge_and_cml:
-        sensor_is_dwd_gauge = df_stations_t.sensor_type == "gauge_dwd"
-        sensor_is_cml = df_stations_t.sensor_type == "cml_ericsson"
+        sensor_is_dwd_gauge = df_stations_t.sensor_type == "gauge"
+        sensor_is_cml = df_stations_t.sensor_type == "cml"
         if intersect_weights is None:
             msg = "You must pass `intersect_weights` if you allow CML data"
             raise ValueError(msg)
