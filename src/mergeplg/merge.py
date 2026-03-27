@@ -881,9 +881,9 @@ class MergeRADOLAN(MergeBase):
             `adjust.bogra_like_smoothing` for details.
 
         """
-        super().__init__()
+        MergeBase.__init__(self)
         self.grid_location_radar = grid_location_radar
-        self.nnear = (nnear,)
+        self.nnear = nnear
         self._update_weights(ds_rad, ds_cmls, ds_gauges)
         self.radar_threshold = radar_threshold
         self.max_distance = max_distance
@@ -923,13 +923,17 @@ class MergeRADOLAN(MergeBase):
             DataArray with the same structure as the ds_rad but with the
             interpolated field.
         """
-        df_cmls_t = radolan.io.transform_openmrg_data_for_old_radolan_code(da_cmls)
-        df_gauges_t = radolan.io.transform_openmrg_data_for_old_radolan_code(da_gauges)
+        if da_cmls is not None:
+            da_cmls = da_cmls.expand_dims("time")
+        if da_gauges is not None:
+            da_gauges = da_gauges.expand_dims("time")
+        df_stations_t = radolan.io.transform_openmrg_data_for_old_radolan_code(
+            ds_cmls=da_cmls, ds_gauges=da_gauges
+        )
 
-        da_adjusted = radolan.processing.rh_to_rw(
-            da_rad,
-            df_cmls_t,
-            df_gauges_t,
+        da_adjusted, _ = radolan.processing.rh_to_rw(
+            ds_radolan_t=da_rad.to_dataset(name="RH"),
+            df_stations_t=df_stations_t,
             start_index_in_relevant_stations=start_index_in_relevant_stations,
             idw_method=self.idw_method,
             nnear=self.nnear,
@@ -940,4 +944,4 @@ class MergeRADOLAN(MergeBase):
             intersect_weights=self.intersect_weights,
         )
 
-        return da_adjusted  # noqa: RET504
+        return da_adjusted
