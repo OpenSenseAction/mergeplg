@@ -13,7 +13,7 @@ def test_transform_openmrg_data_for_old_radolan_code():
     ) = mrg.io.load_and_transform_openmrg_data()
     df_cmls = mrg.radolan.io.transform_openmrg_data_for_old_radolan_code(ds_cmls)
 
-    assert df_cmls.sensor_type.iloc[0] == "cml_ericsson"
+    assert df_cmls.sensor_type.iloc[0] == "cml"
 
     npt.assert_equal(
         df_cmls.station_id.iloc[30:32].to_numpy(), np.array([10031, 10032])
