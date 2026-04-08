@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.testing as npt
+import pytest
 
 import mergeplg as mrg
 
@@ -31,3 +32,12 @@ def test_transform_openmrg_data_for_old_radolan_code():
             dtype="datetime64[ns]",
         ),
     )
+
+
+def test_transform_openmrg_data_for_old_radolan_code_raises_error_if_no_data():
+    with pytest.raises(
+        ValueError, match=r"At least one of ds_cmls and ds_gauges must be provided."
+    ):
+        mrg.radolan.io.transform_openmrg_data_for_old_radolan_code(
+            ds_cmls=None, ds_gauges=None
+        )
