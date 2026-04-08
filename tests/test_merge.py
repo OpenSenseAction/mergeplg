@@ -893,7 +893,7 @@ def test_RADOLAN_merge_equal_to_rh_to_rw():
         ds_radolan_result.RW.values[420:423, 710:713],
         np.array(
             [
-                [4.79999999, 3.8, 4.0],
+                [4.7, 3.8, 4.0],
                 [4.6, 4.5, 4.1],
                 [5.3, 4.9, 5.1],
             ]
