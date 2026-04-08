@@ -923,3 +923,32 @@ def test_RADOLAN_merge_equal_to_rh_to_rw():
             ]
         ),
     )
+
+
+def test_RADOLAN_merge_with_gauge_and_cml():
+    # CML and rain gauge overlapping sets
+    ds_cmls_t = ds_cmls.isel(cml_id=[0], time=0)
+    ds_gauges_t = ds_gauges.isel(id=[1], time=0)
+
+    # Select radar timestep
+    ds_rad_t = ds_rad.isel(time=0)
+
+    merger = merge.MergeRADOLAN(
+        ds_rad=ds_rad.R,
+        ds_cmls=ds_cmls,
+        max_distance=3,
+        grid_location_radar="lower_left",
+    )
+
+    ds_radolan = merger(
+        da_rad=ds_rad_t.R,
+        da_cmls=ds_cmls_t.R,
+        da_gauges=ds_gauges_t.R,
+        start_index_in_relevant_stations="random",
+    )
+
+    # Results checked visually in notebook and values are take from there.
+    np.testing.assert_array_almost_equal(ds_radolan.RW.values[1, 2], 5.0)
+    np.testing.assert_array_almost_equal(ds_radolan.RW.values[0, 3], 4.9)
+    np.testing.assert_array_almost_equal(ds_radolan.RW.values[3, 3], 9.0)
+    np.testing.assert_array_almost_equal(ds_radolan.RW.values[2, 0], 4.4)
