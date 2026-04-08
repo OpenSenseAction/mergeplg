@@ -926,9 +926,13 @@ def test_RADOLAN_merge_equal_to_rh_to_rw():
 
 
 def test_RADOLAN_merge_with_gauge_and_cml():
-    # CML and rain gauge overlapping sets
-    ds_cmls_t = ds_cmls.isel(cml_id=[0], time=0)
-    ds_gauges_t = ds_gauges.isel(id=[1], time=0)
+    # Test with dummy data for CML and gauge. Note that this test is not very meaningful
+    # for the RADOLAN method because selecting audit stations only makes sense if there
+    # are enough stations because we take 20% of stations as audit stations. The test
+    # still check that the code runs and results have been verified visually.
+
+    ds_cmls_t = ds_cmls.isel(time=0)
+    ds_gauges_t = ds_gauges.isel(time=0)
 
     # Select radar timestep
     ds_rad_t = ds_rad.isel(time=0)
@@ -944,7 +948,7 @@ def test_RADOLAN_merge_with_gauge_and_cml():
         da_rad=ds_rad_t.R,
         da_cmls=ds_cmls_t.R,
         da_gauges=ds_gauges_t.R,
-        start_index_in_relevant_stations="random",
+        start_index_in_relevant_stations=0,
     )
 
     # Results checked visually in notebook and values are take from there.
