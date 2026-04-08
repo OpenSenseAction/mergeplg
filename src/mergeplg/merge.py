@@ -893,6 +893,11 @@ class MergeRADOLAN(MergeBase):
         self.p = p
         self.bogra_kwargs = bogra_kwargs
 
+        if ds_cmls is None:
+            self.allow_gauge_and_cml = False
+        else:
+            self.allow_gauge_and_cml = True
+
     def __call__(
         self,
         da_rad,
@@ -940,7 +945,7 @@ class MergeRADOLAN(MergeBase):
             p=self.p,
             max_distance=self.max_distance,
             bogra_kwargs=self.bogra_kwargs,
-            allow_gauge_and_cml=True,
+            allow_gauge_and_cml=self.allow_gauge_and_cml,
             intersect_weights=self.intersect_weights,
         )
 
