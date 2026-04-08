@@ -89,7 +89,7 @@ def rh_to_rw(
     # and not NxMx1. But we want to have the time stamp so that we can use it in
     # this function (even though, I thing it is not yet used to check if the radar
     # and gauge data are from the same time step).
-    if not isinstance(ds_radolan_t.time.values, np.datetime64):
+    if ds_radolan_t.time.values.ndim != 0:
         msg = (
             "`ds_radolan_t` must have a `time` variable but no time dimension, "
             "i.e. there must only be one timestamp in `time`"
