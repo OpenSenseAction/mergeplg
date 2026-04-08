@@ -842,7 +842,7 @@ class MergeRADOLAN(MergeBase):
         range_checks=None,
         idw_method="radolan",
         p=0.7,
-        bogra_kwargs={  # noqa: B006
+        bogra_kwargs={  # noqa: B006 # pylint: disable=dangerous-default-value
             "max_iterations": 100,
             "max_allowed_relative_diff": 3,
         },
