@@ -1,5 +1,7 @@
 """Function to get data in the specific format needed for RADOLAN code"""
 
+import pandas as pd
+
 # TODO: This module could be removed in case the RADOLAN code is updated
 # to use xr.Dataset as input for gauge and CML data.
 
@@ -43,13 +45,12 @@ def transform_openmrg_data_for_old_radolan_code(ds_cmls=None, ds_gauges=None):
         df_gauges["rainfall_amount"] = df_gauges.R
 
     if ds_cmls is not None and ds_gauges is not None:
-        df_stations = (
-            df_cmls[["station_id", "sensor_type", "rainfall_amount", "x", "y"]]
-            .append(
+        df_stations = pd.concat(
+            [
+                df_cmls[["station_id", "sensor_type", "rainfall_amount", "x", "y"]],
                 df_gauges[["station_id", "sensor_type", "rainfall_amount", "x", "y"]],
-                ignore_index=True,
-            )
-            .set_index("time")
+            ],
+            ignore_index=True,
         )
     elif ds_cmls is not None:
         df_stations = df_cmls[
