@@ -17,8 +17,7 @@ notebooks/OpenRainER_case_highlevel.ipynb
 ## Build Information
 
 ```{eval-rst}
-- Short version: |version|
-- Full build version: |release|
+- Version: |release|
 ```
 
 ## Indices and tables

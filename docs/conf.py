@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import importlib.metadata
-import re
 
 project = "mergeplg"
 copyright = "2024, Christian Chwala"
 author = "Christian Chwala"
 release = importlib.metadata.version("mergeplg")
 
-# Keep sidebar version compact (e.g. 0.1.0) while preserving full build
-# metadata in ``release`` for explicit display elsewhere.
-_version_match = re.match(r"^\d+\.\d+\.\d+", release)
-version = _version_match.group(0) if _version_match else release
+# Keep the sidebar header clean by showing only the project name. The full
+# build version is available via ``release`` and shown on the index page.
+version = ""
 
 extensions = [
     "myst_parser",
