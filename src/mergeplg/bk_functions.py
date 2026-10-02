@@ -222,7 +222,9 @@ class OBKrigTree:
 
         # array for storing CML-radar merge
         est_with_nan = np.full_like(np.zeros(self.ixs.shape[0]), np.nan)
+        var_with_nan = np.full_like(est_with_nan, np.nan)
         estimate = np.zeros(ixs.shape[0])
+        variance = np.zeros(ixs.shape[0])
 
         # Compute the contributions from nearby CMLs to points in grid
         for i in range(ixs.shape[0]):
@@ -239,14 +241,20 @@ class OBKrigTree:
             i_mat = np.append(ind, self.n_obs)
 
             # Solve the kriging system
-            w = np.linalg.solve(mat[np.ix_(i_mat, i_mat)], target)[:-1]
+            x = np.linalg.solve(mat[np.ix_(i_mat, i_mat)], target)
+            w = x[:-1]
 
             # Estimate rainfall amounts at location i
             estimate[i] = obs[ind] @ w
 
+            # Estimate variance
+            variance[i] = -x.dot(target)
+
         # Return dataset with interpolated values
         est_with_nan[~mask] = estimate
-        return est_with_nan
+        var_with_nan[~mask] = variance
+
+        return est_with_nan, var_with_nan
 
 
 class BKEDTree:
@@ -475,7 +483,9 @@ class BKEDTree:
 
         # array for storing CML-radar merge
         est_with_nan = np.full_like(np.zeros(self.ixs.shape[0]), np.nan)
+        var_with_nan = np.full_like(np.zeros(self.ixs.shape[0]), np.nan)
         estimate = np.zeros(ixs.shape[0])
+        variance = np.zeros(ixs.shape[0])
 
         # Compute the contributions from nearby CMLs to points in grid
         for i in range(ixs.shape[0]):
@@ -493,18 +503,22 @@ class BKEDTree:
 
             # If all radar observations are the same, this defaults to OK
             if (mat[-1, ind] == mat[-1, ind[0]]).all():
-                w = np.linalg.solve(mat[np.ix_(i_mat, i_mat)][:-1, :-1], target[:-1])
-                w = w[:-1]
+                x = np.linalg.solve(mat[np.ix_(i_mat, i_mat)][:-1, :-1], target[:-1])
+                w = x[:-1]
+                variance[i] = -x.dot(target[:-1])
             else:
                 # Solve the kriging system
-                w = np.linalg.solve(mat[np.ix_(i_mat, i_mat)], target)[:-2]
+                x = np.linalg.solve(mat[np.ix_(i_mat, i_mat)], target)
+                w = x[:-2]
+                variance[i] = -x.dot(target)
 
             # Estimate rainfall amounts at location i
             estimate[i] = obs[ind] @ w
 
         # Return dataset with interpolated values
         est_with_nan[~mask] = estimate
-        return est_with_nan
+        var_with_nan[~mask] = variance
+        return est_with_nan, var_with_nan
 
 
 def within_block_l(x0):
