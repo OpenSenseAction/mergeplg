@@ -9,11 +9,36 @@
 
 <!-- SPHINX-START -->
 
-`mergeplg` is a collection of methods to merge rainfall sensor data from point,
-line and grid geometries. Typically the sensors are rain gauges (point), CML or
-SML (line) and weather radar or satellites (grid).
+`mergeplg` is a collection of methods to merge rainfall observations from
+sensors with different geometries into a single rainfall field. Typically the
+sensors are rain gauges (point), commercial microwave links / CML (line) and
+weather radar or satellites (grid).
 
-This package is currently in a very early stage of development...
+## Features
+
+- **Interpolation** of point and line observations onto a grid using
+  [IDW](https://en.wikipedia.org/wiki/Inverse_distance_weighting) or
+  [kriging](https://en.wikipedia.org/wiki/Kriging) (ordinary kriging and kriging
+  with external drift).
+- **Radar adjustment** that combines radar fields with gauge and CML
+  observations, including the
+  [RADOLAN](https://www.dwd.de/EN/ourservices/radolan/radolan.html) method.
+
+## Installation
+
+```bash
+pip install mergeplg
+```
+
+## Documentation
+
+See the [documentation](https://mergeplg.readthedocs.io/) for usage examples and
+the API reference.
+
+## License
+
+Distributed under the terms of the
+[BSD-3-Clause](https://opensource.org/license/bsd-3-clause) license.
 
 <!-- prettier-ignore-start -->
 [actions-badge]:            https://github.com/OpenSenseAction/mergeplg/workflows/CI/badge.svg
