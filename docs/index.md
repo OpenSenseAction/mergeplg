@@ -7,7 +7,6 @@
 ```{toctree}
 :caption: Examples
 :hidden:
-:titlesonly:
 
 notebooks/openMRG_case.ipynb
 notebooks/openMRG_case_highlevel.ipynb
