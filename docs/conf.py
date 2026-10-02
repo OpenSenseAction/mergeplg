@@ -10,6 +10,7 @@ release = importlib.metadata.version("mergeplg")
 # Keep the sidebar header clean by showing only the project name. The full
 # build version is available via ``release`` and shown on the index page.
 version = ""
+html_title = "mergeplg"
 
 extensions = [
     "myst_parser",
