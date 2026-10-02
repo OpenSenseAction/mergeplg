@@ -69,3 +69,8 @@ jobs:
         uses: codecov/codecov-action@v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Test notebooks on Linux and MacOS
+        if: runner.os != 'Windows'
+        run: >-
+          python -m pytest --nbmake docs/notebooks/*.ipynb
