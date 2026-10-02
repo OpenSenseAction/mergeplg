@@ -7,11 +7,19 @@
 ```{toctree}
 :caption: Examples
 :hidden:
+:titlesonly:
 
 notebooks/openMRG_case.ipynb
 notebooks/openMRG_case_highlevel.ipynb
 notebooks/openMRG_case_RADOLAN.ipynb
 notebooks/OpenRainER_case_highlevel.ipynb
+```
+
+## Build Information
+
+```{eval-rst}
+- Short version: |version|
+- Full build version: |release|
 ```
 
 ## Indices and tables
