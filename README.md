@@ -16,13 +16,18 @@ weather radar or satellites (grid).
 
 ## Features
 
-- **Interpolation** of point and line observations onto a grid using
-  [IDW](https://en.wikipedia.org/wiki/Inverse_distance_weighting) or
-  [kriging](https://en.wikipedia.org/wiki/Kriging) (ordinary kriging and kriging
-  with external drift).
+- **Interpolation** of point (gauge) and line (CML) observations onto a grid
+  using [IDW](https://en.wikipedia.org/wiki/Inverse_distance_weighting) or
+  [kriging](https://en.wikipedia.org/wiki/Kriging), with support for ordinary
+  kriging, kriging with external drift (KED) and block kriging.
 - **Radar adjustment** that combines radar fields with gauge and CML
-  observations, including the
-  [RADOLAN](https://www.dwd.de/EN/ourservices/radolan/radolan.html) method.
+  observations, either additively (interpolating the difference) or
+  multiplicatively (interpolating the ratio), using any of the interpolation
+  methods above, or directly via KED.
+- **Line geometry handling** that treats CMLs correctly: radar values along a
+  link are obtained via grid intersection for computing differences, and
+  (optional) block kriging uses the full line geometry rather than just the
+  midpoint.
 
 ## Installation
 
