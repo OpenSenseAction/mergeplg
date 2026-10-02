@@ -8,7 +8,10 @@
 :caption: Examples
 :hidden:
 
+notebooks/openMRG_case.ipynb
+notebooks/openMRG_case_highlevel.ipynb
 notebooks/openMRG_case_RADOLAN.ipynb
+notebooks/OpenRainER_case_highlevel.ipynb
 ```
 
 ## Indices and tables
