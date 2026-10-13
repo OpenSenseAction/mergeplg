@@ -26,6 +26,12 @@ extensions = [
 
 autosummary_generate = True
 
+# Custom autosummary templates (docs/_templates/autosummary/*.rst) add
+# ``:toctree:`` to the functions/classes/attributes/exceptions blocks so that
+# per-member detail pages are generated (the default module.rst template only
+# adds ``:toctree:`` to the submodules block).
+templates_path = ["_templates"]
+
 source_suffix = [".rst", ".md"]
 exclude_patterns = [
     "_build",
