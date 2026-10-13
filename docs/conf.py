@@ -15,6 +15,7 @@ html_title = "mergeplg"
 extensions = [
     "myst_parser",
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
@@ -23,9 +24,12 @@ extensions = [
     "nbsphinx",
 ]
 
+autosummary_generate = True
+
 source_suffix = [".rst", ".md"]
 exclude_patterns = [
     "_build",
+    "generated",
     "**.ipynb_checkpoints",
     "Thumbs.db",
     ".DS_Store",
