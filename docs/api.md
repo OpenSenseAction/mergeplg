@@ -5,5 +5,9 @@
    :recursive:
    :toctree: generated
 
-   mergeplg
+   mergeplg.bk_functions
+   mergeplg.interpolate
+   mergeplg.io
+   mergeplg.merge
+   mergeplg.radolan
 ```
