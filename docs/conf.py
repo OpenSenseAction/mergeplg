@@ -29,7 +29,6 @@ autosummary_generate = True
 source_suffix = [".rst", ".md"]
 exclude_patterns = [
     "_build",
-    "generated",
     "**.ipynb_checkpoints",
     "Thumbs.db",
     ".DS_Store",
